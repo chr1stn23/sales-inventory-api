@@ -11,6 +11,8 @@ public interface ProductService {
 
     List<ProductResponse> findAll();
 
+    List<ProductResponse> findAllByCategoryId(Long categoryId);
+
     ProductResponse findById(Long id);
 
     ProductResponse update(Long id, ProductRequest request);

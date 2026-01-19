@@ -25,6 +25,10 @@ public class ProductServiceImpl implements ProductService {
     @Override
     @Transactional()
     public ProductResponse create(ProductRequest request) {
+        if (productRepository.existsByNameAndDeletedFalse(request.name())) {
+            throw new IllegalArgumentException("Ya existe un producto con ese nombre");
+        }
+
         Category category = categoryRepository.findByIdAndDeletedFalse(request.categoryId())
                 .orElseThrow(() -> new EntityNotFoundException("Categoría no valida"));
         Product product = new Product();
@@ -47,6 +51,14 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    public List<ProductResponse> findAllByCategoryId(Long categoryId) {
+        return productRepository.findAllByCategoryIdAndDeletedFalse(categoryId)
+                .stream()
+                .map(ProductMapper::toResponse)
+                .toList();
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public ProductResponse findById(Long id) {
         Product product = productRepository.findByIdAndDeletedFalse(id)
@@ -59,6 +71,10 @@ public class ProductServiceImpl implements ProductService {
     public ProductResponse update(Long id, ProductRequest request) {
         Product product = productRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
+
+        if (!product.getName().equals(request.name()) && productRepository.existsByNameAndDeletedFalse(request.name())) {
+            throw new IllegalArgumentException("Ya existe un producto con ese nombre");
+        }
 
         Category category = categoryRepository.findByIdAndDeletedFalse(request.categoryId())
                 .orElseThrow(() -> new EntityNotFoundException("Categoría no valida"));

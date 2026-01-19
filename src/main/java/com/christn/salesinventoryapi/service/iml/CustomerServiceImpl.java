@@ -21,6 +21,11 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional
     public CustomerResponse create(CustomerRequest request) {
+
+        if (repository.existsByEmailAndDeletedFalse(request.email())) {
+            throw new IllegalArgumentException("Ya existe un cliente con ese email");
+        }
+
         Customer customer = new Customer();
         customer.setFullName(request.fullName());
         customer.setEmail(request.email());

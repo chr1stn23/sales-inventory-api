@@ -74,7 +74,7 @@ public class SaleServiceImpl implements SaleService {
     @Override
     @Transactional(readOnly = true)
     public List<SaleResponse> findAll() {
-        return saleRepository.findAll()
+        return saleRepository.findAllByDeletedFalse()
                 .stream()
                 .map(SaleMapper::toResponse)
                 .toList();
