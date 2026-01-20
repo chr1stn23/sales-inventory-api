@@ -31,6 +31,8 @@ public class ProductController {
             @ApiResponse(responseCode = "201", description = "Producto creada exitosamente"),
             @ApiResponse(responseCode = "400", description = "Error de validación", content = @Content(schema =
             @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "404", description = "No encontrado: La Categoría no existe", content = @Content(schema =
+            @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "409", description = "Producto duplicada", content = @Content(schema =
             @Schema(implementation = ApiError.class)))
     })
@@ -65,7 +67,7 @@ public class ProductController {
             @ApiResponse(responseCode = "200", description = "Producto actualizado exitosamente"),
             @ApiResponse(responseCode = "400", description = "Error de validación", content = @Content(schema =
             @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "404", description = "Producto no encontrado", content = @Content(schema =
+            @ApiResponse(responseCode = "404", description = "No encontrado: El Producto o la Categoría no existen", content = @Content(schema =
             @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "409", description = "Producto duplicado", content = @Content(schema =
             @Schema(implementation = ApiError.class)))

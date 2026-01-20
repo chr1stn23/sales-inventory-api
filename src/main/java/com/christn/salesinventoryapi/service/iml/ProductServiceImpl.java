@@ -77,7 +77,7 @@ public class ProductServiceImpl implements ProductService {
         }
 
         Category category = categoryRepository.findByIdAndDeletedFalse(request.categoryId())
-                .orElseThrow(() -> new IllegalArgumentException("Categoría no valida"));
+                .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada"));
 
         product.setName(request.name());
         product.setDescription(request.description());
