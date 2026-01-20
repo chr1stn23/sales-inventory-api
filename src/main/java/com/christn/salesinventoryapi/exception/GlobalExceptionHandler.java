@@ -2,6 +2,7 @@ package com.christn.salesinventoryapi.exception;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.LocalDateTime;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -18,6 +20,7 @@ public class GlobalExceptionHandler {
             EntityNotFoundException ex,
             HttpServletRequest request
     ) {
+        log.warn("Entity not found: {}", ex.getMessage(), ex);
         return buildError(
                 ex.getMessage(),
                 HttpStatus.NOT_FOUND,
@@ -30,6 +33,7 @@ public class GlobalExceptionHandler {
             IllegalArgumentException ex,
             HttpServletRequest request
     ) {
+        log.error("Business rule violated: {}", ex.getMessage(), ex);
         return buildError(
                 ex.getMessage(),
                 HttpStatus.BAD_REQUEST,
@@ -42,6 +46,7 @@ public class GlobalExceptionHandler {
             IllegalStateException ex,
             HttpServletRequest request
     ) {
+        log.error("Business rule violated: {}", ex.getMessage(), ex);
         return buildError(
                 ex.getMessage(),
                 HttpStatus.CONFLICT,
@@ -54,6 +59,7 @@ public class GlobalExceptionHandler {
             MethodArgumentNotValidException ex,
             HttpServletRequest request
     ) {
+        log.warn("Invalid data: {}", ex.getMessage(), ex);
         String detail = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
@@ -73,6 +79,7 @@ public class GlobalExceptionHandler {
             Exception ex,
             HttpServletRequest request
     ) {
+        log.error("Internal server error: {}", ex.getMessage(), ex);
         return buildError(
                 "Error interno del servidor",
                 HttpStatus.INTERNAL_SERVER_ERROR,
