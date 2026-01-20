@@ -23,7 +23,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Transactional
     public CategoryResponse create(CategoryRequest request) {
         if (repository.existsByNameAndDeletedFalse(request.name())) {
-            throw new IllegalArgumentException("Ya existe una categoría con ese nombre");
+            throw new IllegalStateException("Ya existe una categoría con ese nombre");
         }
 
         Category category = new Category();
@@ -36,7 +36,7 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional(readOnly = true)
     public List<CategoryResponse> findAll() {
-        return repository.findAllDeletedFalse()
+        return repository.findAllByDeletedFalse()
                 .stream()
                 .map(CategoryMapper::toResponse)
                 .toList();

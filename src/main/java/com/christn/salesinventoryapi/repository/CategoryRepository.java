@@ -8,7 +8,7 @@ import java.util.Optional;
 
 public interface CategoryRepository extends JpaRepository<Category, Long> {
 
-    List<Category> findAllDeletedFalse();
+    List<Category> findAllByDeletedFalse();
 
     Optional<Category> findByIdAndDeletedFalse(Long id);
 
