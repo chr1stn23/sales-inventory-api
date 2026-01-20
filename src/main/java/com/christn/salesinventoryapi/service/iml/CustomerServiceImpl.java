@@ -23,7 +23,7 @@ public class CustomerServiceImpl implements CustomerService {
     public CustomerResponse create(CustomerRequest request) {
 
         if (repository.existsByEmailAndDeletedFalse(request.email())) {
-            throw new IllegalArgumentException("Ya existe un cliente con ese email");
+            throw new IllegalStateException("Ya existe un cliente con ese email");
         }
 
         Customer customer = new Customer();
