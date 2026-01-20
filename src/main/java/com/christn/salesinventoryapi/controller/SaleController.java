@@ -3,6 +3,10 @@ package com.christn.salesinventoryapi.controller;
 import com.christn.salesinventoryapi.dto.request.SaleRequest;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
 import com.christn.salesinventoryapi.service.SaleService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,11 +17,18 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/sales")
+@Tag(name = "Sales", description = "Registro y consulta de ventas")
 @RequiredArgsConstructor
 public class SaleController {
 
     private final SaleService service;
 
+    @Operation(summary = "Crear venta", description = "Registra una nueva venta en el sistema")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Venta creada exitosamente"),
+            @ApiResponse(responseCode = "400", description = "Error de validación"),
+            @ApiResponse(responseCode = "404", description = "No encontrado: El Cliente o uno de los Productos no existen")
+    })
     @PostMapping
     public ResponseEntity<SaleResponse> create(@Valid @RequestBody SaleRequest request) {
         SaleResponse response = service.create(request);
@@ -27,6 +38,7 @@ public class SaleController {
                 .body(response);
     }
 
+    @Operation(summary = "Listar ventas", description = "Obtiene una lista de todas las ventas registradas")
     @GetMapping
     public List<SaleResponse> findAll() {
         return service.findAll();
