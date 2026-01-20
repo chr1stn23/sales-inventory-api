@@ -57,7 +57,7 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada"));
 
         if (!category.getName().equals(request.name()) && repository.existsByNameAndDeletedFalse(request.name())) {
-            throw new IllegalArgumentException("Ya existe una categoría con ese nombre");
+            throw new IllegalStateException("Ya existe una categoría con ese nombre");
         }
 
         category.setName(request.name());

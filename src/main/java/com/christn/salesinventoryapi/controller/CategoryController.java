@@ -64,6 +64,8 @@ public class CategoryController {
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Categoría actualizada exitosamente"),
             @ApiResponse(responseCode = "404", description = "Categoría no encontrada", content = @Content(schema =
+            @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "409", description = "Categoría duplicada", content = @Content(schema =
             @Schema(implementation = ApiError.class)))
     })
     @PutMapping("/{id}")
