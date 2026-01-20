@@ -2,7 +2,14 @@ package com.christn.salesinventoryapi.controller;
 
 import com.christn.salesinventoryapi.dto.request.ProductRequest;
 import com.christn.salesinventoryapi.dto.response.ProductResponse;
+import com.christn.salesinventoryapi.exception.ApiError;
 import com.christn.salesinventoryapi.service.ProductService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -13,11 +20,20 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/products")
+@Tag(name = "Products", description = "CRUD de productos")
 @RequiredArgsConstructor
 public class ProductController {
 
     private final ProductService service;
 
+    @Operation(summary = "Crear producto", description = "Registra un nuevo producto en el sistema")
+    @ApiResponses({
+            @ApiResponse(responseCode = "201", description = "Producto creada exitosamente"),
+            @ApiResponse(responseCode = "400", description = "Error de validación", content = @Content(schema =
+            @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "409", description = "Producto duplicada", content = @Content(schema =
+            @Schema(implementation = ApiError.class)))
+    })
     @PostMapping
     public ResponseEntity<ProductResponse> create(@Valid @RequestBody ProductRequest request) {
         ProductResponse response = service.create(request);
@@ -27,16 +43,33 @@ public class ProductController {
                 .body(response);
     }
 
+    @Operation(summary = "Listar productos", description = "Obtiene una lista de todos los productos activos")
     @GetMapping
     public List<ProductResponse> findAll() {
         return service.findAll();
     }
 
+    @Operation(summary = "Obtener producto por ID", description = "Busca un producto por su identificador")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Producto encontrado"),
+            @ApiResponse(responseCode = "404", description = "Producto no encontrado", content = @Content(schema =
+            @Schema(implementation = ApiError.class)))
+    })
     @GetMapping("/{id}")
     public ProductResponse findById(@PathVariable Long id) {
         return service.findById(id);
     }
 
+    @Operation(summary = "Actualizar producto", description = "Actualiza los datos de un producto existente")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Producto actualizado exitosamente"),
+            @ApiResponse(responseCode = "400", description = "Error de validación", content = @Content(schema =
+            @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "404", description = "Producto no encontrado", content = @Content(schema =
+            @Schema(implementation = ApiError.class))),
+            @ApiResponse(responseCode = "409", description = "Producto duplicado", content = @Content(schema =
+            @Schema(implementation = ApiError.class)))
+    })
     @PutMapping("/{id}")
     public ProductResponse update(
             @PathVariable Long id,
@@ -45,6 +78,12 @@ public class ProductController {
         return service.update(id, request);
     }
 
+    @Operation(summary = "Eliminar producto", description = "Marca un producto como eliminado (soft delete)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Producto eliminado exitosamente"),
+            @ApiResponse(responseCode = "404", description = "Producto no encontrado", content = @Content(schema =
+            @Schema(implementation = ApiError.class)))
+    })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);

@@ -26,7 +26,7 @@ public class ProductServiceImpl implements ProductService {
     @Transactional()
     public ProductResponse create(ProductRequest request) {
         if (productRepository.existsByNameAndDeletedFalse(request.name())) {
-            throw new IllegalArgumentException("Ya existe un producto con ese nombre");
+            throw new IllegalStateException("Ya existe un producto con ese nombre");
         }
 
         Category category = categoryRepository.findByIdAndDeletedFalse(request.categoryId())
@@ -73,11 +73,11 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
 
         if (!product.getName().equals(request.name()) && productRepository.existsByNameAndDeletedFalse(request.name())) {
-            throw new IllegalArgumentException("Ya existe un producto con ese nombre");
+            throw new IllegalStateException("Ya existe un producto con ese nombre");
         }
 
         Category category = categoryRepository.findByIdAndDeletedFalse(request.categoryId())
-                .orElseThrow(() -> new EntityNotFoundException("Categoría no valida"));
+                .orElseThrow(() -> new IllegalArgumentException("Categoría no valida"));
 
         product.setName(request.name());
         product.setDescription(request.description());
