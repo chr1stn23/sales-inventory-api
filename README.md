@@ -78,3 +78,8 @@ Formato de errores basado en RFC 7807 (Problem Details for HTTP APIs)
 * **Como** usuario del sistema, **quiero** registrar una venta con uno o más productos, **para** llevar el control de las transacciones realizadas.
 * **Como** usuario del sistema, **quiero** consultar el historial de ventas, **para** analizar la información registrada.
 * **Como** usuario del sistema, **quiero** recibir mensajes de error claros y consistentes, **para** entender por qué una operación no fue exitosa.
+
+## Pruebas (Testing)
+* Test de Services (Unitarias)
+* Test de Repositories (JPA)
+* Test de Controllers (Web)
