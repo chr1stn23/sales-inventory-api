@@ -63,7 +63,7 @@ public class CategoryServiceImpl implements CategoryService {
         category.setName(request.name());
         category.setDescription(request.description());
 
-        return CategoryMapper.toResponse(repository.save(category));
+        return CategoryMapper.toResponse(category);
     }
 
     //Soft delete
