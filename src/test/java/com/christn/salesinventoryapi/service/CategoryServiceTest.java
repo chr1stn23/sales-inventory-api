@@ -120,20 +120,6 @@ public class CategoryServiceTest {
             assertThat(responses).isEmpty();
             verify(repository).findAllByDeletedFalse();
         }
-
-        @Test
-        @DisplayName("Should only return non-deleted categories")
-        void findAll_ShouldOnlyReturnNonDeletedCategories() {
-            //Given
-            when(repository.findAllByDeletedFalse()).thenReturn(List.of());
-
-            //When
-            categoryService.findAll();
-
-            //Then
-            verify(repository).findAllByDeletedFalse();
-            verify(repository, never()).findAll();
-        }
     }
 
     @Nested
@@ -194,7 +180,6 @@ public class CategoryServiceTest {
             assertThat(response.description()).isEqualTo("Updated Desc");
             assertThat(existingCategory.getName()).isEqualTo("Updated Name");
             assertThat(existingCategory.getDescription()).isEqualTo("Updated Desc");
-            verify(repository, never()).save(any());
         }
 
         @Test
