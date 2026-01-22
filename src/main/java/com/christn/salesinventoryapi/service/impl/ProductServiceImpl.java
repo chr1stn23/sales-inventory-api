@@ -1,4 +1,4 @@
-package com.christn.salesinventoryapi.service.iml;
+package com.christn.salesinventoryapi.service.impl;
 
 import com.christn.salesinventoryapi.dto.mapper.ProductMapper;
 import com.christn.salesinventoryapi.dto.request.ProductRequest;
@@ -23,7 +23,7 @@ public class ProductServiceImpl implements ProductService {
     private final CategoryRepository categoryRepository;
 
     @Override
-    @Transactional()
+    @Transactional
     public ProductResponse create(ProductRequest request) {
         if (productRepository.existsByNameAndDeletedFalse(request.name())) {
             throw new IllegalStateException("Ya existe un producto con ese nombre");
@@ -52,6 +52,9 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<ProductResponse> findAllByCategoryId(Long categoryId) {
+        categoryRepository.findByIdAndDeletedFalse(categoryId)
+                .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada"));
+
         return productRepository.findAllByCategoryIdAndDeletedFalse(categoryId)
                 .stream()
                 .map(ProductMapper::toResponse)
@@ -72,18 +75,21 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
 
-        if (!product.getName().equals(request.name()) && productRepository.existsByNameAndDeletedFalse(request.name())) {
+        if (!product.getName()
+                .equals(request.name()) && productRepository.existsByNameAndDeletedFalse(request.name())) {
             throw new IllegalStateException("Ya existe un producto con ese nombre");
         }
 
-        Category category = categoryRepository.findByIdAndDeletedFalse(request.categoryId())
-                .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada"));
+        if (!product.getCategory().getId().equals(request.categoryId())) {
+            Category category = categoryRepository.findByIdAndDeletedFalse(request.categoryId())
+                    .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada"));
+            product.setCategory(category);
+        }
 
         product.setName(request.name());
         product.setDescription(request.description());
         product.setPrice(request.price());
         product.setStock(request.stock());
-        product.setCategory(category);
 
         return ProductMapper.toResponse(product);
     }

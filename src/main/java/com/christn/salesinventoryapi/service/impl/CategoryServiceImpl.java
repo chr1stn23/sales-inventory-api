@@ -1,4 +1,4 @@
-package com.christn.salesinventoryapi.service.iml;
+package com.christn.salesinventoryapi.service.impl;
 
 import com.christn.salesinventoryapi.dto.mapper.CategoryMapper;
 import com.christn.salesinventoryapi.dto.request.CategoryRequest;

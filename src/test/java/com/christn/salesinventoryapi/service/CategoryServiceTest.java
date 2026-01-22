@@ -4,7 +4,7 @@ import com.christn.salesinventoryapi.dto.request.CategoryRequest;
 import com.christn.salesinventoryapi.dto.response.CategoryResponse;
 import com.christn.salesinventoryapi.model.Category;
 import com.christn.salesinventoryapi.repository.CategoryRepository;
-import com.christn.salesinventoryapi.service.iml.CategoryServiceImpl;
+import com.christn.salesinventoryapi.service.impl.CategoryServiceImpl;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
