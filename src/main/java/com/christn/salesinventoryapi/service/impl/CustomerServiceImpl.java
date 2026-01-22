@@ -36,7 +36,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional(readOnly = true)
     public List<CustomerResponse> findAll() {
-        return repository.findAll()
+        return repository.findAllByDeletedFalse()
                 .stream()
                 .map(CustomerMapper::toResponse)
                 .toList();
