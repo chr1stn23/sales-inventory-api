@@ -1,6 +1,7 @@
 package com.christn.salesinventoryapi.service.impl;
 
 import com.christn.salesinventoryapi.dto.mapper.SaleMapper;
+import com.christn.salesinventoryapi.dto.request.SaleDetailRequest;
 import com.christn.salesinventoryapi.dto.request.SaleRequest;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
 import com.christn.salesinventoryapi.model.Customer;
@@ -18,7 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -38,35 +42,38 @@ public class SaleServiceImpl implements SaleService {
         sale.setCustomer(customer);
         sale.setSaleDate(LocalDateTime.now());
 
-        List<SaleDetail> details = request.details().stream().map(item -> {
-            Product product = productRepository.findByIdAndDeletedFalse(item.productId())
-                    .orElseThrow(() -> new EntityNotFoundException("Producto no válido"));
+        List<SaleDetail> details = new ArrayList<>();
 
-            if (product.getStock() < item.quantity()) {
-                throw new IllegalArgumentException("Stock insuficiente para " + product.getName());
-            }
+        Map<Long, Integer> groupedDetails = request.details().stream()
+                .collect(Collectors.groupingBy(
+                        SaleDetailRequest::productId,
+                        Collectors.summingInt(SaleDetailRequest::quantity)
+                ));
 
-            product.setStock(product.getStock() - item.quantity());
+        for (var entry : groupedDetails.entrySet()) {
+            Product product = productRepository.findByIdAndDeletedFalse(entry.getKey())
+                    .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
 
-            BigDecimal subtotal = product.getPrice()
-                    .multiply(BigDecimal.valueOf(item.quantity()));
+            int quantity = entry.getValue();
+
+            product.validateStock(quantity);
 
             SaleDetail detail = new SaleDetail();
             detail.setSale(sale);
             detail.setProduct(product);
-            detail.setQuantity(item.quantity());
+            detail.setQuantity(quantity);
             detail.setUnitPrice(product.getPrice());
-            detail.setSubTotal(subtotal);
+            detail.setSubTotal(product.getPrice().multiply(BigDecimal.valueOf(quantity)));
+            details.add(detail);
+        }
 
-            return detail;
-        }).toList();
-
-        BigDecimal total = details.stream()
-                .map(SaleDetail::getSubTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        details.forEach(d -> d.getProduct().decreaseStock(d.getQuantity()));
 
         sale.setDetails(details);
-        sale.setTotalAmount(total);
+        sale.setTotalAmount(details.stream()
+                .map(SaleDetail::getSubTotal)
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+        );
 
         return SaleMapper.toResponse(saleRepository.save(sale));
     }

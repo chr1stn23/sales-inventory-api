@@ -23,7 +23,7 @@ public class Product extends BaseEntity {
     @Column(nullable = false, length = 150)
     private String name;
 
-    @Column(length = 255)
+    @Column
     private String description;
 
     @Column(nullable = false, precision = 10, scale = 2)
@@ -35,4 +35,14 @@ public class Product extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
+
+    public void validateStock(int quantity) {
+        if (stock < quantity) {
+            throw new IllegalArgumentException("Stock insuficiente");
+        }
+    }
+
+    public void decreaseStock(int quantity) {
+        this.stock -= quantity;
+    }
 }
