@@ -31,7 +31,8 @@ public class ProductController {
             @ApiResponse(responseCode = "201", description = "Producto creada exitosamente"),
             @ApiResponse(responseCode = "400", description = "Error de validación", content = @Content(schema =
             @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "404", description = "No encontrado: La Categoría no existe", content = @Content(schema =
+            @ApiResponse(responseCode = "404", description = "No encontrado: La Categoría no existe", content =
+            @Content(schema =
             @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "409", description = "Producto duplicada", content = @Content(schema =
             @Schema(implementation = ApiError.class)))
@@ -51,6 +52,18 @@ public class ProductController {
         return service.findAll();
     }
 
+    @Operation(summary = "Listar productos por categoría", description = "Obtiene todos los productos activos de una " +
+            "categoría")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Productos encontrados"),
+            @ApiResponse(responseCode = "404", description = "Categoría no encontrada", content = @Content(schema =
+            @Schema(implementation = ApiError.class)))
+    })
+    @GetMapping("/category/{categoryId}")
+    public List<ProductResponse> findByCategoryId(@PathVariable Long categoryId) {
+        return service.findAllByCategoryId(categoryId);
+    }
+
     @Operation(summary = "Obtener producto por ID", description = "Busca un producto por su identificador")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Producto encontrado"),
@@ -67,7 +80,8 @@ public class ProductController {
             @ApiResponse(responseCode = "200", description = "Producto actualizado exitosamente"),
             @ApiResponse(responseCode = "400", description = "Error de validación", content = @Content(schema =
             @Schema(implementation = ApiError.class))),
-            @ApiResponse(responseCode = "404", description = "No encontrado: El Producto o la Categoría no existen", content = @Content(schema =
+            @ApiResponse(responseCode = "404", description = "No encontrado: El Producto o la Categoría no existen",
+                    content = @Content(schema =
             @Schema(implementation = ApiError.class))),
             @ApiResponse(responseCode = "409", description = "Producto duplicado", content = @Content(schema =
             @Schema(implementation = ApiError.class)))
