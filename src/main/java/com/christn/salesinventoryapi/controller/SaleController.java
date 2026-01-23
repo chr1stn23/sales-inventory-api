@@ -34,7 +34,7 @@ public class SaleController {
         SaleResponse response = service.create(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
-                .header("Location", "/api/sales" + response.id())
+                .header("Location", "/api/sales/" + response.id())
                 .body(response);
     }
 
