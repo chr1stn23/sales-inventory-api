@@ -15,6 +15,19 @@ import java.time.LocalDateTime;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<ApiError> handleInsufficientStockError(
+            InsufficientStockException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Insufficient stock: {}", ex.getMessage(), ex);
+        return buildError(
+                ex.getMessage(),
+                HttpStatus.CONFLICT,
+                request.getRequestURI()
+        );
+    }
+
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ApiError> handleNotFound(
             EntityNotFoundException ex,

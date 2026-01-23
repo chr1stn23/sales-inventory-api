@@ -1,5 +1,6 @@
 package com.christn.salesinventoryapi.model;
 
+import com.christn.salesinventoryapi.exception.InsufficientStockException;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -38,7 +39,7 @@ public class Product extends BaseEntity {
 
     public void validateStock(int quantity) {
         if (stock < quantity) {
-            throw new IllegalArgumentException("Stock insuficiente");
+            throw new InsufficientStockException(getName());
         }
     }
 
