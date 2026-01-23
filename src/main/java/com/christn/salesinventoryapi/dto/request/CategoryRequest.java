@@ -7,12 +7,12 @@ import jakarta.validation.constraints.Size;
 public record CategoryRequest(
         @Schema(description = "Nombre de la categoría", example = "Electrónica", requiredMode =
                 Schema.RequiredMode.REQUIRED, minLength = 1, maxLength = 100)
-        @NotBlank
-        @Size(max = 100)
+        @NotBlank(message = "El nombre de la categoría no puede estar vacío")
+        @Size(max = 100, message = "El nombre de la categoría no puede superar los 100 caracteres")
         String name,
 
         @Schema(description = "Descripción de la categoría", example = "Productos electrónicos", maxLength = 255)
-        @Size(max = 255)
+        @Size(max = 255, message = "La descripción de la categoría no puede superar los 255 caracteres")
         String description
 ) {
 }
