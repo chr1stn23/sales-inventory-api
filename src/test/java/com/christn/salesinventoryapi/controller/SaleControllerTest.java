@@ -20,7 +20,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -64,7 +64,7 @@ public class SaleControllerTest {
                             .content(jsonMapper.writeValueAsString(request))
                     )
                     .andExpect(status().isCreated())
-                    .andExpect(header().exists("Location"))
+                    .andExpect(header().string("Location", "/api/sales/10"))
                     .andExpect(jsonPath("$.id").value(10L))
                     .andExpect(jsonPath("$.totalAmount").value(100.00));
         }
@@ -80,7 +80,17 @@ public class SaleControllerTest {
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(jsonMapper.writeValueAsString(request))
                     )
-                    .andExpect(status().isBadRequest());
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    //ApiError contract
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.title").value("Bad Request"))
+                    .andExpect(jsonPath("$.detail").exists())
+                    .andExpect(jsonPath("$.instance").value("/api/sales"))
+                    .andExpect(jsonPath("$.type").exists())
+                    .andExpect(jsonPath("$.timestamp").exists());
+
+            verify(saleService, never()).create(any());
         }
     }
 
