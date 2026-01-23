@@ -8,6 +8,9 @@ import com.christn.salesinventoryapi.service.SaleService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -18,7 +21,9 @@ import tools.jackson.databind.json.JsonMapper;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Stream;
 
+import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -40,6 +45,31 @@ public class SaleControllerTest {
     @Nested
     @DisplayName("POST /api/sales")
     class CreateTests {
+
+        static Stream<Arguments> invalidSaleRequests() {
+            return Stream.of(
+                    Arguments.of(new SaleRequest(null, List.of()), "El ID del cliente no puede ser nulo"),
+                    Arguments.of(new SaleRequest(1L, List.of()), "La lista de detalles de la venta no puede estar " +
+                            "vacía")
+            );
+        }
+
+        static Stream<Arguments> invalidSaleRequestsWithDetails() {
+            return Stream.of(
+                    Arguments.of(new SaleRequest(1L,
+                                    List.of(new SaleDetailRequest(null, 5))),
+                            "El ID del producto no puede ser nulo"),
+                    Arguments.of(new SaleRequest(1L,
+                                    List.of(new SaleDetailRequest(1L, 0))),
+                            "La cantidad del producto no puede ser menor que 1"),
+                    Arguments.of(new SaleRequest(1L,
+                                    List.of(
+                                            new SaleDetailRequest(null, 0),
+                                            new SaleDetailRequest(2L, 5)
+                                    ))
+                            , "El ID del producto no puede ser nulo")
+            );
+        }
 
         @Test
         @DisplayName("Should return 201 when sale is created")
@@ -69,12 +99,10 @@ public class SaleControllerTest {
                     .andExpect(jsonPath("$.totalAmount").value(100.00));
         }
 
-        @Test
+        @ParameterizedTest
+        @MethodSource("invalidSaleRequests")
         @DisplayName("Should return 400 when invalid request")
-        void create_ShouldReturn400_WhenInvalidRequest() throws Exception {
-            //Given
-            SaleRequest request = new SaleRequest(null, List.of());
-
+        void create_ShouldReturn400_WhenInvalidRequest(SaleRequest request, String expectedMessage) throws Exception {
             //When/Then
             mockMvc.perform(post("/api/sales")
                             .contentType(MediaType.APPLICATION_JSON)
@@ -85,7 +113,27 @@ public class SaleControllerTest {
                     //ApiError contract
                     .andExpect(jsonPath("$.status").value(400))
                     .andExpect(jsonPath("$.title").value("Bad Request"))
-                    .andExpect(jsonPath("$.detail").exists())
+                    .andExpect(jsonPath("$.detail").value(containsString(expectedMessage)))
+                    .andExpect(jsonPath("$.instance").value("/api/sales"))
+                    .andExpect(jsonPath("$.type").exists())
+                    .andExpect(jsonPath("$.timestamp").exists());
+
+            verify(saleService, never()).create(any());
+        }
+
+        @ParameterizedTest
+        @MethodSource("invalidSaleRequestsWithDetails")
+        @DisplayName("Should return 400 when invalid SaleDetailRequest in details")
+        void create_ShouldReturn400_WhenInvalidDetail(SaleRequest request, String expectedMessage) throws Exception {
+            mockMvc.perform(post("/api/sales")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(jsonMapper.writeValueAsString(request))
+                    )
+                    .andExpect(status().isBadRequest())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.status").value(400))
+                    .andExpect(jsonPath("$.title").value("Bad Request"))
+                    .andExpect(jsonPath("$.detail").value(containsString(expectedMessage)))
                     .andExpect(jsonPath("$.instance").value("/api/sales"))
                     .andExpect(jsonPath("$.type").exists())
                     .andExpect(jsonPath("$.timestamp").exists());
