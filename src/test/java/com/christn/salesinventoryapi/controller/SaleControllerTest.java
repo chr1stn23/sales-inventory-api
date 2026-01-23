@@ -71,7 +71,7 @@ public class SaleControllerTest {
 
         @Test
         @DisplayName("Should return 400 when invalid request")
-        void createSale_ShouldReturn400_whenInvalidRequest() throws Exception {
+        void create_ShouldReturn400_WhenInvalidRequest() throws Exception {
             //Given
             SaleRequest request = new SaleRequest(null, List.of());
 
@@ -100,7 +100,7 @@ public class SaleControllerTest {
 
         @Test
         @DisplayName("Should return a list of sales when there are existing sales")
-        void findAllSales_ShouldReturnList() throws Exception {
+        void findAll_ShouldReturnList() throws Exception {
             //Given
             SaleResponse response = new SaleResponse(1L, LocalDateTime.now(), new BigDecimal("30.00"), null, null);
 
@@ -116,7 +116,7 @@ public class SaleControllerTest {
 
         @Test
         @DisplayName("Should return an empty list when there are no sales")
-        void findAllSales_ShouldReturnEmptyList() throws Exception {
+        void findAll_ShouldReturnEmptyList() throws Exception {
             //When
             when(saleService.findAll()).thenReturn(List.of());
 
