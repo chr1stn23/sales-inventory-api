@@ -9,28 +9,28 @@ public record ProductRequest(
 
         @Schema(description = "Nombre del producto", example = "Televisor", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotBlank(message = "El nombre no puede estar vacío")
-        @Size(max = 150)
+        @Size(max = 150, message = "El nombre del producto no puede superar los 150 caracteres")
         String name,
 
         @Schema(description = "Descripción del producto", example = "Televisor de 55 pulgadas")
-        @Size(max = 255)
+        @Size(max = 255, message = "La descripción del producto no puede superar los 255 caracteres")
         String description,
 
         @Schema(description = "Precio del producto", example = "1000.00", requiredMode = Schema.RequiredMode.REQUIRED
                 , minimum = "0", exclusiveMinimum = true)
-        @NotNull
-        @Positive(message = "El precio debe ser mayor que 0")
+        @NotNull(message = "El precio del producto no puede ser nulo")
+        @Positive(message = "El precio del producto debe ser mayor que 0")
         BigDecimal price,
 
         @Schema(description = "Cantidad en stock del producto", example = "10", requiredMode =
                 Schema.RequiredMode.REQUIRED, minimum = "0")
-        @NotNull
-        @Min(value = 0, message = "El stock no puede ser negativo")
+        @NotNull(message = "El stock del producto no puede ser nulo")
+        @Min(value = 0, message = "El stock del producto no puede ser negativo")
         Integer stock,
 
         @Schema(description = "Identificador de la categoría del producto", example = "1", requiredMode =
                 Schema.RequiredMode.REQUIRED)
-        @NotNull(message = "El id de categoría no puede ser nulo")
+        @NotNull(message = "El ID de categoría del producto no puede ser nulo")
         Long categoryId
 ) {
 }

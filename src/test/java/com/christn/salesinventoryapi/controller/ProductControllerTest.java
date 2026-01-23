@@ -67,10 +67,10 @@ public class ProductControllerTest {
         @ParameterizedTest
         @CsvSource({
                 "'',Desc,1500,10,1,El nombre no puede estar vacío",
-                "Laptop,'',0,10,1,El precio debe ser mayor que 0",
-                "Laptop,Desc,-100,10,1,El precio debe ser mayor que 0",
-                "Laptop,Desc,1500,-5,1,El stock no puede ser negativo",
-                "Laptop,Desc,1500,10,,El id de categoría no puede ser nulo",
+                "Laptop,'',0,10,1,El precio del producto debe ser mayor que 0",
+                "Laptop,Desc,-100,10,1,El precio del producto debe ser mayor que 0",
+                "Laptop,Desc,1500,-5,1,El stock del producto no puede ser negativo",
+                "Laptop,Desc,1500,10,,El ID de categoría del producto no puede ser nulo",
         })
         void create_ShouldReturn400_WhenInvalidRequest(String name, String description, BigDecimal price, Integer stock,
                 Long categoryId, String expectedMessage) throws Exception {
