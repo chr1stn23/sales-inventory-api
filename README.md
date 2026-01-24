@@ -51,11 +51,18 @@ Este proyecto fue diseñado como un MVP backend, priorizando claridad, mantenibi
 6. Los productos inactivos no pueden venderse
 7. Las categorías inactivas no permiten nuevos productos
 
-### Opcionales (implementadas)
+### Reglas adicionales implementadas
 
 1. El precio del producto se guarda en el detalle de venta (histórico)
 2. El total de la venta se calcula exclusivamente en el backend
-3. No se permite eliminar productos con ventas asociadas
+3. Los productos utilizan soft delete para preservar el historial de ventas
+
+### 📝 Nota de diseño
+> El sistema permite desactivar (soft delete) productos aunque tengan ventas asociadas.
+Esto garantiza la integridad del historial de ventas sin impedir la evolución del catálogo,
+evitando inconsistencias y permitiendo bloquear el uso del producto en futuras transacciones.
+
+
 ---
 ## 🏗️ Decisiones técnicas
 ### Stack tecnológico
@@ -126,21 +133,21 @@ http://localhost:8080/swagger-ui.html
 ## ▶️ Ejecución del proyecto
 ### Requisitos
 - Java 21 
-- Maven 3.9+ 
-### Ejecutar en local
-```mvn spring-boot:run```
+- Maven 3.9+
+### Perfiles disponibles
+- dev: Base de datos H2 en memoria (modo desarrollo, perfil por defecto)
+- prod: Preparado para base de datos real (PostgreSQL)
+
+### Ejecutar en local (perfil dev)
+``mvn spring-boot:run``
+
+> Por defecto, la aplicación se ejecuta usando el perfil dev.
+
+### Ejecutar explícitamente con perfil
+```mvn spring-boot:run -Dspring-boot.run.profiles=dev```
 
 ### Ejecutar tests
-```mvn test ```
-
----
-## 🔮 Próximos pasos (Roadmap)
-
-- Autenticación y autorización (JWT)
-- Dockerización del proyecto 
-- Pipeline de CI con GitHub Actions 
-- Manejo de perfiles por entorno 
-- Métricas y observabilidad
+``mvn test``
 
 ---
 ## 👤 Autor
