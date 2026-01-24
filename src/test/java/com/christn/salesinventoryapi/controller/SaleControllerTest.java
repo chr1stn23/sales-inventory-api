@@ -48,7 +48,8 @@ public class SaleControllerTest {
 
         static Stream<Arguments> invalidSaleRequests() {
             return Stream.of(
-                    Arguments.of(new SaleRequest(null, List.of()), "El ID del cliente no puede ser nulo"),
+                    Arguments.of(new SaleRequest(null, List.of(new SaleDetailRequest(1L, 1))), "El ID del cliente no " +
+                            "puede ser nulo"),
                     Arguments.of(new SaleRequest(1L, List.of()), "La lista de detalles de la venta no puede estar " +
                             "vacía")
             );
@@ -64,10 +65,16 @@ public class SaleControllerTest {
                             "La cantidad del producto no puede ser menor que 1"),
                     Arguments.of(new SaleRequest(1L,
                                     List.of(
-                                            new SaleDetailRequest(null, 0),
+                                            new SaleDetailRequest(null, 2),
                                             new SaleDetailRequest(2L, 5)
                                     ))
-                            , "El ID del producto no puede ser nulo")
+                            , "El ID del producto no puede ser nulo"),
+                    Arguments.of(new SaleRequest(1L,
+                                    List.of(
+                                            new SaleDetailRequest(1L, 2),
+                                            new SaleDetailRequest(2L, 0)
+                                    ))
+                            , "La cantidad del producto no puede ser menor que 1")
             );
         }
 
