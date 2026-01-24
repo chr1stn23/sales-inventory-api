@@ -150,5 +150,18 @@ http://localhost:8080/swagger-ui.html
 ``mvn test``
 
 ---
+## 🐳 Ejecución con Docker
+El proyecto incluye configuración Docker para facilitar su despliegue con una base de datos real (PostgreSQL).
+
+### Requisitos 
+- Docker
+- Docker Compose
+
+### Levantar la aplicación con Docker
+```
+docker compuse up --build
+```
+
+---
 ## 👤 Autor
 ***Christian Lara Vega***
