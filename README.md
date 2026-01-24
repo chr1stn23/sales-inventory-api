@@ -1,3 +1,5 @@
+[![CI](https://github.com/chr1stn23/sales-inventory-api/actions/workflows/ci.yml/badge.svg)](https://github.com/chr1stn23/sales-inventory-api/actions/workflows/ci.yml)
+
 # 📦 Sales Inventory API
 
 API REST para la gestión de ventas e inventario, desarrollada con Spring Boot 4, aplicando buenas prácticas backend, reglas de negocio reales, arquitectura por capas y testing.
