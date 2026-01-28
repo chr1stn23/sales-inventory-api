@@ -1,0 +1,16 @@
+name: sales_inventory_dev
+services:
+  db:
+    image: postgres:18.1
+    container_name: sales_inventory_db_dev
+    environment:
+      POSTGRES_DB: sales_inventory_dev
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data_dev:/var/lib/postgresql
+
+volumes:
+  db_data_dev:
