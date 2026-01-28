@@ -3,6 +3,7 @@ package com.christn.salesinventoryapi.controller;
 import com.christn.salesinventoryapi.dto.request.ProductRequest;
 import com.christn.salesinventoryapi.dto.response.CategoryResponse;
 import com.christn.salesinventoryapi.dto.response.ProductResponse;
+import com.christn.salesinventoryapi.security.JwtAuthFilter;
 import com.christn.salesinventoryapi.service.ProductService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;
@@ -11,7 +12,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -26,7 +30,14 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(ProductController.class)
+@WebMvcTest(
+        controllers = ProductController.class,
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.ASSIGNABLE_TYPE,
+                classes = JwtAuthFilter.class
+        )
+)
+@AutoConfigureMockMvc(addFilters = false)
 public class ProductControllerTest {
 
     @Autowired

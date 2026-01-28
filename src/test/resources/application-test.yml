@@ -1,6 +1,6 @@
 spring:
   datasource:
-    url: jdbc:h2:mem:test_db;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:mem:test_db;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
     driver-class-name: org.h2.Driver
     username: sa
     password:
@@ -9,6 +9,15 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
 
   flyway:
     enabled: false
+
+app:
+  security:
+    jwt:
+      secret: "404bead1a00c663e8d07a62061a85d5a55b30bffa13f68944612c994e8cab848"
+      expiration_minutes: 120

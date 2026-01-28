@@ -4,6 +4,7 @@ import com.christn.salesinventoryapi.dto.request.SaleDetailRequest;
 import com.christn.salesinventoryapi.dto.request.SaleRequest;
 import com.christn.salesinventoryapi.dto.response.CustomerResponse;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
+import com.christn.salesinventoryapi.security.JwtAuthFilter;
 import com.christn.salesinventoryapi.service.SaleService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -12,7 +13,10 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -30,7 +34,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(SaleController.class)
+@WebMvcTest(
+        controllers = SaleController.class,
+        excludeFilters = @ComponentScan.Filter(
+                type = FilterType.ASSIGNABLE_TYPE,
+                classes = JwtAuthFilter.class
+        )
+)
+@AutoConfigureMockMvc(addFilters = false)
 public class SaleControllerTest {
 
     @Autowired
