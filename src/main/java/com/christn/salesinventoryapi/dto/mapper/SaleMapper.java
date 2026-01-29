@@ -2,6 +2,7 @@ package com.christn.salesinventoryapi.dto.mapper;
 
 import com.christn.salesinventoryapi.dto.response.SaleDetailResponse;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
+import com.christn.salesinventoryapi.dto.response.SaleSummaryResponse;
 import com.christn.salesinventoryapi.model.Sale;
 import com.christn.salesinventoryapi.model.SaleDetail;
 
@@ -29,5 +30,14 @@ public class SaleMapper {
                         detail.getSubTotal()
                 )
         ).toList();
+    }
+
+    public static SaleSummaryResponse toSummaryResponse(Sale sale) {
+        return new SaleSummaryResponse(
+                sale.getId(),
+                sale.getSaleDate(),
+                sale.getTotalAmount(),
+                CustomerMapper.toResponse(sale.getCustomer())
+        );
     }
 }

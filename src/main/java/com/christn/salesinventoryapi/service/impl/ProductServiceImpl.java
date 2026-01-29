@@ -2,17 +2,23 @@ package com.christn.salesinventoryapi.service.impl;
 
 import com.christn.salesinventoryapi.dto.mapper.ProductMapper;
 import com.christn.salesinventoryapi.dto.request.ProductRequest;
+import com.christn.salesinventoryapi.dto.response.PageResponse;
 import com.christn.salesinventoryapi.dto.response.ProductResponse;
 import com.christn.salesinventoryapi.model.Category;
 import com.christn.salesinventoryapi.model.Product;
 import com.christn.salesinventoryapi.repository.CategoryRepository;
 import com.christn.salesinventoryapi.repository.ProductRepository;
+import com.christn.salesinventoryapi.repository.spec.ProductSpecifications;
 import com.christn.salesinventoryapi.service.ProductService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -101,5 +107,25 @@ public class ProductServiceImpl implements ProductService {
         Product product = productRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
         product.setDeleted(true);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<ProductResponse> search(String query, Long categoryId, Integer minStock, Integer maxStock,
+            BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
+        Specification<Product> spec = Specification.where(ProductSpecifications.notDeleted());
+
+        if (query != null && !query.isBlank()) spec = spec.and(ProductSpecifications.query(query));
+        if (categoryId != null) spec = spec.and(ProductSpecifications.categoryId(categoryId));
+        if (minStock != null) spec = spec.and(ProductSpecifications.minStock(minStock));
+        if (maxStock != null) spec = spec.and(ProductSpecifications.maxStock(maxStock));
+        if (minPrice != null) spec = spec.and(ProductSpecifications.minPrice(minPrice));
+        if (maxPrice != null) spec = spec.and(ProductSpecifications.maxPrice(maxPrice));
+
+        Page<ProductResponse> page = productRepository
+                .findAll(spec, pageable)
+                .map(ProductMapper::toResponse);
+
+        return PageResponse.from(page);
     }
 }

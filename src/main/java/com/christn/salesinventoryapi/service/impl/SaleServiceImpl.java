@@ -3,7 +3,9 @@ package com.christn.salesinventoryapi.service.impl;
 import com.christn.salesinventoryapi.dto.mapper.SaleMapper;
 import com.christn.salesinventoryapi.dto.request.SaleDetailRequest;
 import com.christn.salesinventoryapi.dto.request.SaleRequest;
+import com.christn.salesinventoryapi.dto.response.PageResponse;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
+import com.christn.salesinventoryapi.dto.response.SaleSummaryResponse;
 import com.christn.salesinventoryapi.model.Customer;
 import com.christn.salesinventoryapi.model.Product;
 import com.christn.salesinventoryapi.model.Sale;
@@ -11,9 +13,13 @@ import com.christn.salesinventoryapi.model.SaleDetail;
 import com.christn.salesinventoryapi.repository.CustomerRepository;
 import com.christn.salesinventoryapi.repository.ProductRepository;
 import com.christn.salesinventoryapi.repository.SaleRepository;
+import com.christn.salesinventoryapi.repository.spec.SaleSpecifications;
 import com.christn.salesinventoryapi.service.SaleService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -85,5 +91,24 @@ public class SaleServiceImpl implements SaleService {
                 .stream()
                 .map(SaleMapper::toResponse)
                 .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<SaleSummaryResponse> search(Long customerId, LocalDateTime from, LocalDateTime to,
+            BigDecimal minTotal, BigDecimal maxTotal, Pageable pageable) {
+        Specification<Sale> spec = Specification.where(SaleSpecifications.notDeleted());
+
+        if (customerId != null) spec = spec.and(SaleSpecifications.customerId(customerId));
+        if (from != null) spec = spec.and(SaleSpecifications.from(from));
+        if (to != null) spec = spec.and(SaleSpecifications.to(to));
+        if (minTotal != null) spec = spec.and(SaleSpecifications.minTotal(minTotal));
+        if (maxTotal != null) spec = spec.and(SaleSpecifications.maxTotal(maxTotal));
+
+        Page<SaleSummaryResponse> page = saleRepository
+                .findAll(spec, pageable)
+                .map(SaleMapper::toSummaryResponse);
+
+        return PageResponse.from(page);
     }
 }
