@@ -30,10 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -51,45 +48,57 @@ public class SaleServiceImpl implements SaleService {
         Customer customer = customerRepository.findByIdAndDeletedFalse(request.customerId())
                 .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado"));
 
-        Sale sale = new Sale();
-        sale.setCustomer(customer);
-        sale.setSaleDate(LocalDateTime.now());
-
-        List<SaleDetail> details = new ArrayList<>();
-
         Map<Long, Integer> groupedDetails = request.details().stream()
                 .collect(Collectors.groupingBy(
                         SaleDetailRequest::productId,
                         Collectors.summingInt(SaleDetailRequest::quantity)
                 ));
 
+        List<Long> productIds = new ArrayList<>(groupedDetails.keySet());
+        List<Product> products = productRepository.findByIdInAndDeletedFalse(productIds);
+
+        if (products.size() != productIds.size()) {
+            Set<Long> found = products.stream().map(Product::getId).collect(Collectors.toSet());
+            Long missing = productIds.stream().filter(id -> !found.contains(id)).findFirst().orElse(null);
+            throw new EntityNotFoundException("Producto no encontrado" + (missing != null ? ": " + missing : ""));
+        }
+
+        Map<Long, Product> productMap = products.stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
+        Sale sale = new Sale();
+        sale.setCustomer(customer);
+        sale.setSaleDate(LocalDateTime.now());
+
+        List<SaleDetail> details = new ArrayList<>(groupedDetails.size());
+        BigDecimal total = BigDecimal.ZERO;
+
         for (var entry : groupedDetails.entrySet()) {
             Long productId = entry.getKey();
             int quantity = entry.getValue();
 
-            Product product = productRepository.findByIdAndDeletedFalse(entry.getKey())
-                    .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
+            Product product = productMap.get(productId);
 
             int updated = productRepository.decreaseStockIfEnough(productId, quantity);
-
             if (updated == 0) {
                 throw new InsufficientStockException(product.getName());
             }
+
+            BigDecimal subtotal = product.getPrice().multiply(BigDecimal.valueOf(quantity));
 
             SaleDetail detail = new SaleDetail();
             detail.setSale(sale);
             detail.setProduct(product);
             detail.setQuantity(quantity);
             detail.setUnitPrice(product.getPrice());
-            detail.setSubTotal(product.getPrice().multiply(BigDecimal.valueOf(quantity)));
+            detail.setSubTotal(subtotal);
             details.add(detail);
+
+            total = total.add(subtotal);
         }
 
         sale.setDetails(details);
-        sale.setTotalAmount(details.stream()
-                .map(SaleDetail::getSubTotal)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-        );
+        sale.setTotalAmount(total);
 
         return SaleMapper.toResponse(saleRepository.save(sale));
     }

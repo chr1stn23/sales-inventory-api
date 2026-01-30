@@ -7,6 +7,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.*;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +19,8 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     List<Product> findAllByCategoryIdAndDeletedFalse(Long categoryId);
 
+    List<Product> findByIdInAndDeletedFalse(Collection<Long> ids);
+
     boolean existsByNameAndDeletedFalse(String name);
 
     @Override
@@ -26,7 +29,7 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Product p SET p.stock = p.stock + :qty WHERE p.id = :id")
-    int increaseStock(@Param("id") Long id, @Param("qty") Integer qty);
+    void increaseStock(@Param("id") Long id, @Param("qty") Integer qty);
 
     @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE Product p SET p.stock = p.stock - :qty WHERE p.id = :id AND p.stock >= :qty")
