@@ -25,7 +25,8 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -77,6 +78,10 @@ public class SaleServiceTest {
 
             when(customerRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(customer));
             when(productRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(product1));
+            when(productRepository.decreaseStockIfEnough(1L, 2)).thenAnswer(inv -> {
+                product1.setStock(product1.getStock() - 2);
+                return 1;
+            });
             when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> {
                 Sale sale = invocation.getArgument(0);
                 sale.setId(1L);
@@ -92,6 +97,7 @@ public class SaleServiceTest {
             assertThat(response.details()).hasSize(1);
             assertThat(product1.getStock()).isEqualTo(8);
 
+            verify(productRepository).decreaseStockIfEnough(1L, 2);
             verify(saleRepository).save(any(Sale.class));
         }
 
@@ -112,6 +118,14 @@ public class SaleServiceTest {
             when(customerRepository.findByIdAndDeletedFalse(2L)).thenReturn(Optional.of(customer));
             when(productRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(product1));
             when(productRepository.findByIdAndDeletedFalse(2L)).thenReturn(Optional.of(product2));
+            when(productRepository.decreaseStockIfEnough(1L, 2)).thenAnswer(inv -> {
+                product1.setStock(product1.getStock() - 2);
+                return 1;
+            });
+            when(productRepository.decreaseStockIfEnough(2L, 3)).thenAnswer(inv -> {
+                product2.setStock(product2.getStock() - 3);
+                return 1;
+            });
             when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             //When
@@ -138,6 +152,10 @@ public class SaleServiceTest {
 
             when(customerRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(customer));
             when(productRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(product));
+            when(productRepository.decreaseStockIfEnough(1L, 5)).thenAnswer(inv -> {
+                product.setStock(product.getStock() - 5);
+                return 1;
+            });
             when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
             //When
@@ -147,6 +165,8 @@ public class SaleServiceTest {
             assertThat(response.totalAmount()).isEqualTo(new BigDecimal("250.00"));
             assertThat(response.details()).hasSize(1);
             assertThat(product.getStock()).isEqualTo(5);
+
+            verify(productRepository, atMostOnce()).decreaseStockIfEnough(1L, 5);
         }
 
         @Test
@@ -237,6 +257,7 @@ public class SaleServiceTest {
 
             when(customerRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(customer));
             when(productRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(product1));
+            when(productRepository.decreaseStockIfEnough(1L, 1)).thenReturn(1);
             when(productRepository.findByIdAndDeletedFalse(2L)).thenReturn(Optional.empty());
 
             // When / Then
@@ -244,8 +265,9 @@ public class SaleServiceTest {
                     .isInstanceOf(EntityNotFoundException.class)
                     .hasMessage("Producto no encontrado");
 
-            assertThat(product1.getStock()).isEqualTo(10);
             verify(saleRepository, never()).save(any());
+            verify(productRepository).decreaseStockIfEnough(1L, 1);
+            verify(productRepository, never()).decreaseStockIfEnough(eq(2L), anyInt());
         }
     }
 

@@ -16,7 +16,12 @@ public class SaleMapper {
                 sale.getSaleDate(),
                 sale.getTotalAmount(),
                 CustomerMapper.toResponse(sale.getCustomer()),
-                toDetailResponse(sale.getDetails())
+                toDetailResponse(sale.getDetails()),
+                sale.getStatus(),
+                sale.getVoidedAt(),
+                sale.getVoidedBy(),
+                sale.getVoidedByUserId(),
+                sale.getVoidReason()
         );
     }
 

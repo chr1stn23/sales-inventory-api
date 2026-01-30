@@ -4,6 +4,8 @@ import com.christn.salesinventoryapi.dto.request.SaleRequest;
 import com.christn.salesinventoryapi.dto.response.PageResponse;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
 import com.christn.salesinventoryapi.dto.response.SaleSummaryResponse;
+import com.christn.salesinventoryapi.dto.response.VoidSaleResponse;
+import com.christn.salesinventoryapi.model.SaleStatus;
 import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
@@ -16,12 +18,17 @@ public interface SaleService {
 
     List<SaleResponse> findAll();
 
+    SaleResponse findById(Long id);
+
     PageResponse<SaleSummaryResponse> search(
             Long customerId,
             LocalDateTime from,
             LocalDateTime to,
             BigDecimal minTotal,
             BigDecimal maxTotal,
+            SaleStatus status,
             Pageable pageable
     );
+
+    VoidSaleResponse voidSale(Long id, String reason);
 }

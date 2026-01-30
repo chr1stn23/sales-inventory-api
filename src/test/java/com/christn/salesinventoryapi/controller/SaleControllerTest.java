@@ -100,7 +100,12 @@ public class SaleControllerTest {
                     LocalDateTime.now(),
                     new BigDecimal("100.00"),
                     customerResponse,
-                    List.of()
+                    List.of(),
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
             );
 
             //When
@@ -168,7 +173,8 @@ public class SaleControllerTest {
         @DisplayName("Should return a list of sales when there are existing sales")
         void findAll_ShouldReturnList() throws Exception {
             //Given
-            SaleResponse response = new SaleResponse(1L, LocalDateTime.now(), new BigDecimal("30.00"), null, null);
+            SaleResponse response = new SaleResponse(1L, LocalDateTime.now(), new BigDecimal("30.00"), null, null,
+                    null, null, null, null, null);
 
             //When
             when(saleService.findAll()).thenReturn(List.of(response));

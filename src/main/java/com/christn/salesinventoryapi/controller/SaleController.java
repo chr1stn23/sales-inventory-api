@@ -1,11 +1,17 @@
 package com.christn.salesinventoryapi.controller;
 
 import com.christn.salesinventoryapi.dto.request.SaleRequest;
+import com.christn.salesinventoryapi.dto.request.VoidSaleRequest;
 import com.christn.salesinventoryapi.dto.response.PageResponse;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
 import com.christn.salesinventoryapi.dto.response.SaleSummaryResponse;
+import com.christn.salesinventoryapi.dto.response.VoidSaleResponse;
+import com.christn.salesinventoryapi.exception.ApiError;
+import com.christn.salesinventoryapi.model.SaleStatus;
 import com.christn.salesinventoryapi.service.SaleService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -17,6 +23,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -53,6 +60,17 @@ public class SaleController {
         return service.findAll();
     }
 
+    @Operation(summary = "Obtener venta por ID", description = "Busca una venta por su identificador")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Venta encontrada"),
+            @ApiResponse(responseCode = "404", description = "Venta no encontrada", content = @Content(schema =
+            @Schema(implementation = ApiError.class)))
+    })
+    @GetMapping("/{id}")
+    public SaleResponse findById(@PathVariable Long id) {
+        return service.findById(id);
+    }
+
     @Operation(summary = "Buscar venta con filtros", description = "Buscar ventas por ID del cliente, fecha y total")
     @GetMapping("/search")
     public PageResponse<SaleSummaryResponse> search(
@@ -61,8 +79,24 @@ public class SaleController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime to,
             @RequestParam(required = false) BigDecimal minTotal,
             @RequestParam(required = false) BigDecimal maxTotal,
+            @RequestParam(required = false) SaleStatus status,
             @PageableDefault(sort = "saleDate", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        return service.search(customerId, from, to, minTotal, maxTotal, pageable);
+        return service.search(customerId, from, to, minTotal, maxTotal, status, pageable);
+    }
+
+    @Operation(summary = "Anular venta", description = "Anula una venta existente")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Venta anulada exitosamente"),
+            @ApiResponse(responseCode = "404", description = "Venta no encontrada"),
+            @ApiResponse(responseCode = "409", description = "Venta ya anulada"),
+            @ApiResponse(responseCode = "403", description = "Permiso denegado")
+    })
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
+    @PostMapping("/{id}/void")
+    public VoidSaleResponse voidSale(@PathVariable Long id,
+            @Valid @RequestBody(required = false) VoidSaleRequest body) {
+        String reason = (body != null) ? body.reason() : null;
+        return service.voidSale(id, reason);
     }
 }

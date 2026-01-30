@@ -22,3 +22,9 @@ app:
     jwt:
       secret: "9abbe1c291649b7a344009b06589cdfcdebf5d27edb5a2ca8ce6619559b8ed89"
       expiration_minutes: 120
+
+logging:
+  level:
+    root: info
+    org.springframework.web: debug
+    com.christn.salesinventoryapi: trace

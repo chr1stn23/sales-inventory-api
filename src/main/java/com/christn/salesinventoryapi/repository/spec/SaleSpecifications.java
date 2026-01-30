@@ -1,6 +1,7 @@
 package com.christn.salesinventoryapi.repository.spec;
 
 import com.christn.salesinventoryapi.model.Sale;
+import com.christn.salesinventoryapi.model.SaleStatus;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
@@ -30,5 +31,9 @@ public class SaleSpecifications {
 
     public static Specification<Sale> maxTotal(BigDecimal max) {
         return (root, query, cb) -> cb.lessThanOrEqualTo(root.get("totalAmount"), max);
+    }
+
+    public static Specification<Sale> status(SaleStatus status) {
+        return (root, query, cb) -> cb.equal(root.get("status"), status);
     }
 }

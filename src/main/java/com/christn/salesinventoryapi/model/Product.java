@@ -37,13 +37,4 @@ public class Product extends BaseEntity {
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
-    public void validateStock(int quantity) {
-        if (stock < quantity) {
-            throw new InsufficientStockException(getName());
-        }
-    }
-
-    public void decreaseStock(int quantity) {
-        this.stock -= quantity;
-    }
 }

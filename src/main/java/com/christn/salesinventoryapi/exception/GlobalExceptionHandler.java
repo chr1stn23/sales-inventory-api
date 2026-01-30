@@ -15,6 +15,19 @@ import java.time.LocalDateTime;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(ForbiddenException.class)
+    public ResponseEntity<ApiError> handleForbidden(
+            ForbiddenException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Forbidden: {}", ex.getMessage(), ex);
+        return buildError(
+                ex.getMessage(),
+                HttpStatus.FORBIDDEN,
+                request.getRequestURI()
+        );
+    }
+
     @ExceptionHandler(InsufficientStockException.class)
     public ResponseEntity<ApiError> handleInsufficientStockError(
             InsufficientStockException ex,
