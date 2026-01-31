@@ -21,3 +21,4 @@ app:
     jwt:
       secret: "404bead1a00c663e8d07a62061a85d5a55b30bffa13f68944612c994e8cab848"
       expiration_minutes: 120
+      refresh_expiration_days: 30
