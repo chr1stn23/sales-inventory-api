@@ -6,6 +6,7 @@ import com.christn.salesinventoryapi.dto.request.LoginRequest;
 import com.christn.salesinventoryapi.dto.request.LogoutRequest;
 import com.christn.salesinventoryapi.dto.request.RefreshRequest;
 import com.christn.salesinventoryapi.dto.response.AuthResponse;
+import com.christn.salesinventoryapi.dto.response.MeResponse;
 import com.christn.salesinventoryapi.model.RefreshToken;
 import com.christn.salesinventoryapi.model.Role;
 import com.christn.salesinventoryapi.repository.RefreshTokenRepository;
@@ -116,11 +117,26 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void logout(LogoutRequest request) {
+    @Transactional
+    public void logout(LogoutRequest request, AuthUserDetails principal) {
         String hash = TokenUtil.sha256Hex(request.refreshToken());
-        refreshTokenRepository.findByTokenHash((hash)).ifPresent(rt -> {
-            rt.setRevokedAt(LocalDateTime.now());
-            refreshTokenRepository.save(rt);
-        });
+        refreshTokenRepository.revokeByTokenHashAndUserId(hash, principal.getId(), LocalDateTime.now());
+    }
+
+    @Override
+    public void logoutAll(AuthUserDetails principal) {
+        refreshTokenRepository.revokeAllByUserId(principal.getId(), LocalDateTime.now());
+    }
+
+    @Override
+    public MeResponse me(AuthUserDetails principal) {
+        return new MeResponse(
+                principal.getId(),
+                principal.getUsername(),
+                principal.getAuthorities().stream()
+                        .map(GrantedAuthority::getAuthority).filter(Objects::nonNull)
+                        .map(r -> r.startsWith("ROLE_") ? r.substring(5) : r)
+                        .collect(Collectors.toSet())
+        );
     }
 }

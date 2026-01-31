@@ -61,7 +61,7 @@ public class SecurityConfig {
                         // swagger libre
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         // auth libre
-                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/auth/refresh").permitAll()
                         // lo demás protegido
                         .anyRequest().authenticated()
                 )
