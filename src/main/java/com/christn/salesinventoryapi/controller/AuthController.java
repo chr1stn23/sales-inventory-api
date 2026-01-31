@@ -1,60 +1,48 @@
 package com.christn.salesinventoryapi.controller;
 
 import com.christn.salesinventoryapi.dto.request.LoginRequest;
+import com.christn.salesinventoryapi.dto.request.RefreshRequest;
 import com.christn.salesinventoryapi.dto.response.AuthResponse;
-import com.christn.salesinventoryapi.security.AuthUserDetails;
-import com.christn.salesinventoryapi.security.JwtService;
+import com.christn.salesinventoryapi.service.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
-    private final AuthenticationManager authenticationManager;
-    private final JwtService jwtService;
+    private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody LoginRequest request) {
-        Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.email(), request.password())
+    public ResponseEntity<AuthResponse> login(
+            @Valid @RequestBody LoginRequest request,
+            HttpServletRequest http
+    ) {
+        return ResponseEntity.ok(
+                authService.login(request, getIp(http), http.getHeader("User-Agent"))
         );
-
-        var principal = (AuthUserDetails) authentication.getPrincipal();
-
-        var roles = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList();
-
-        String token = jwtService.generateToken(
-                principal.getUsername(),
-                Map.of("userId", principal.getId(), "roles", roles)
-        );
-
-        return ResponseEntity.ok(new AuthResponse(token));
     }
 
-    @GetMapping("/me")
-    public ResponseEntity<?> me(Authentication authentication, @RequestHeader("Authorization") String authorization) {
-        String token = authorization.substring(7);
-        Long userId = jwtService.extractClaim(token, c -> c.get("userId", Long.class));
+    @PostMapping("/refresh")
+    public ResponseEntity<AuthResponse> refresh(
+            @Valid @RequestBody RefreshRequest request,
+            HttpServletRequest http
+    ) {
+        return ResponseEntity.ok(
+                authService.refresh(request, getIp(http), http.getHeader("User-Agent"))
+        );
+    }
 
-        var roles = authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .toList();
-
-        return ResponseEntity.ok(Map.of(
-                "id", userId,
-                "email", authentication.getName(),
-                "roles", roles
-        ));
+    private String getIp(HttpServletRequest request) {
+        String xf = request.getHeader("X-Forwarded-For");
+        if (xf != null && !xf.isBlank()) return xf.split(",")[0].trim();
+        return request.getRemoteAddr();
     }
 }

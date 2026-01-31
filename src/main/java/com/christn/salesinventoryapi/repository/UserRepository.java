@@ -1,6 +1,7 @@
 package com.christn.salesinventoryapi.repository;
 
 import com.christn.salesinventoryapi.model.User;
+import jakarta.validation.constraints.NotNull;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -10,6 +11,10 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     @EntityGraph(attributePaths = {"roles"})
     Optional<User> findByEmail(String email);
+
+    @Override
+    @EntityGraph(attributePaths = {"roles"})
+    Optional<User> findById(Long id);
 
     boolean existsByEmail(String email);
 }

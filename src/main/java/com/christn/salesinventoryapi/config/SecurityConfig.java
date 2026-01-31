@@ -1,6 +1,6 @@
 package com.christn.salesinventoryapi.config;
 
-import com.christn.salesinventoryapi.security.JwtAuthFilter;
+import com.christn.salesinventoryapi.auth.JwtAuthFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

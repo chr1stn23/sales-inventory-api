@@ -15,7 +15,7 @@ import com.christn.salesinventoryapi.repository.ProductRepository;
 import com.christn.salesinventoryapi.repository.SaleDetailRepository;
 import com.christn.salesinventoryapi.repository.SaleRepository;
 import com.christn.salesinventoryapi.repository.spec.SaleSpecifications;
-import com.christn.salesinventoryapi.security.AuthUserDetails;
+import com.christn.salesinventoryapi.auth.AuthUserDetails;
 import com.christn.salesinventoryapi.service.SaleService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;

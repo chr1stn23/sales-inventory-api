@@ -1,8 +1,7 @@
-package com.christn.salesinventoryapi.security;
+package com.christn.salesinventoryapi.auth;
 
 import com.christn.salesinventoryapi.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -18,6 +17,23 @@ public class AppUserDetailService implements UserDetailsService {
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         var user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        var authorities = user.getRoles().stream()
+                .map(r -> new SimpleGrantedAuthority("ROLE_" + r.name()))
+                .toList();
+
+        return new AuthUserDetails(
+                user.getId(),
+                user.getEmail(),
+                user.getPasswordHash(),
+                user.isEnabled(),
+                authorities
+        );
+    }
+
+    public UserDetails loadUserById(Long id) {
+        var user = userRepository.findById(id)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         var authorities = user.getRoles().stream()

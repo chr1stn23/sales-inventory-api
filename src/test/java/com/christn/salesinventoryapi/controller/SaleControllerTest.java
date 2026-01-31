@@ -4,7 +4,7 @@ import com.christn.salesinventoryapi.dto.request.SaleDetailRequest;
 import com.christn.salesinventoryapi.dto.request.SaleRequest;
 import com.christn.salesinventoryapi.dto.response.CustomerResponse;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
-import com.christn.salesinventoryapi.security.JwtAuthFilter;
+import com.christn.salesinventoryapi.auth.JwtAuthFilter;
 import com.christn.salesinventoryapi.service.SaleService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;

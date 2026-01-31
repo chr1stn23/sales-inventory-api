@@ -1,4 +1,4 @@
-package com.christn.salesinventoryapi.security;
+package com.christn.salesinventoryapi.auth;
 
 import lombok.Getter;
 import org.jspecify.annotations.Nullable;

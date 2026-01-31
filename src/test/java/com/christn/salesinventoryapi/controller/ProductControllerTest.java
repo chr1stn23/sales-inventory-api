@@ -3,7 +3,7 @@ package com.christn.salesinventoryapi.controller;
 import com.christn.salesinventoryapi.dto.request.ProductRequest;
 import com.christn.salesinventoryapi.dto.response.CategoryResponse;
 import com.christn.salesinventoryapi.dto.response.ProductResponse;
-import com.christn.salesinventoryapi.security.JwtAuthFilter;
+import com.christn.salesinventoryapi.auth.JwtAuthFilter;
 import com.christn.salesinventoryapi.service.ProductService;
 import jakarta.persistence.EntityNotFoundException;
 import org.junit.jupiter.api.DisplayName;

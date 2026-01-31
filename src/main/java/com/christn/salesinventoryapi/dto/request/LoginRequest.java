@@ -4,7 +4,11 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public record LoginRequest(
-        @Email @NotBlank String email,
-        @NotBlank String password
+        @Email(message = "El correo electrónico debe tener un formato válido")
+        @NotBlank(message = "El correo electrónico no puede estar vacío")
+        String email,
+
+        @NotBlank(message = "La contraseña no puede estar vacía")
+        String password
 ) {
 }
