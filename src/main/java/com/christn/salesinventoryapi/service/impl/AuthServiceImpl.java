@@ -39,9 +39,7 @@ public class AuthServiceImpl implements AuthService {
         var authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.email(), request.password())
         );
-        System.out.println("principal class=" + Objects.requireNonNull(authentication.getPrincipal()).getClass());
         var principal = (AuthUserDetails) authentication.getPrincipal();
-        System.out.println("principal id=" + principal.getId());
 
         Long userId = principal.getId();
         String email = principal.getUsername();

@@ -1,20 +1,93 @@
 package com.christn.salesinventoryapi.exception;
 
+import com.christn.salesinventoryapi.model.Role;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
+import org.springframework.security.authentication.LockedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import tools.jackson.databind.exc.InvalidFormatException;
 
 import java.time.LocalDateTime;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiError> handleAuthenticationException(
+            org.springframework.security.core.AuthenticationException ex,
+            HttpServletRequest request
+    ) {
+        String message = "Credenciales inválidas";
+
+        if (ex instanceof DisabledException) {
+            message = "Usuario deshabilitado";
+        } else if (ex instanceof BadCredentialsException) {
+            message = "Credenciales inválidas";
+        } else if (ex instanceof LockedException) {
+            message = "Usuario bloqueado";
+        }
+
+        return buildError(
+                message,
+                HttpStatus.UNAUTHORIZED,
+                request.getRequestURI()
+        );
+    }
+
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiError> handleHttpMessageNotReadable(
+            HttpMessageNotReadableException ex,
+            HttpServletRequest request
+    ) {
+        Throwable cause = ex.getCause();
+
+        // Jackson enum inválido
+        if (cause instanceof InvalidFormatException ife) {
+
+            // Si el tipo objetivo era Role
+            Class<?> targetType = ife.getTargetType();
+            if (targetType != null && targetType.equals(Role.class)) {
+                String invalid = String.valueOf(ife.getValue());
+                String allowed = java.util.Arrays.stream(Role.values())
+                        .map(Enum::name)
+                        .reduce((a, b) -> a + ", " + b)
+                        .map(s -> "[" + s + "]")
+                        .orElse("[ADMIN, SELLER, WAREHOUSE]");
+
+                return buildError(
+                        "Rol inválido: '" + invalid + "'. Valores permitidos: " + allowed,
+                        HttpStatus.BAD_REQUEST,
+                        request.getRequestURI()
+                );
+            }
+
+            // Otro formato inválido cualquiera
+            return buildError(
+                    "JSON inválido: valor con formato incorrecto",
+                    HttpStatus.BAD_REQUEST,
+                    request.getRequestURI()
+            );
+        }
+
+        // JSON mal formado o body ilegible
+        return buildError(
+                "JSON inválido o mal formado",
+                HttpStatus.BAD_REQUEST,
+                request.getRequestURI()
+        );
+    }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiError> handleAccessDenied(
