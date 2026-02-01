@@ -1,6 +1,7 @@
 package com.christn.salesinventoryapi.config;
 
 import com.christn.salesinventoryapi.auth.JwtAuthFilter;
+import com.christn.salesinventoryapi.auth.RestAuthenticationEntryPoint;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -52,11 +53,14 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) {
+    SecurityFilterChain filterChain(HttpSecurity http, RestAuthenticationEntryPoint entryPoint) {
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint(entryPoint)
+                )
                 .authorizeHttpRequests(auth -> auth
                         // swagger libre
                         .requestMatchers("/swagger-ui/**", "/v3/api-docs/**").permitAll()

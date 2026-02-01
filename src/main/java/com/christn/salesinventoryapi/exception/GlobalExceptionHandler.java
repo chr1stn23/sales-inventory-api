@@ -11,6 +11,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,9 +24,22 @@ import java.time.LocalDateTime;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ApiError> handleAuthorizationDenied(
+            AuthorizationDeniedException ex,
+            HttpServletRequest request
+    ) {
+        log.warn("Authorization denied: {}", ex.getMessage(), ex);
+        return buildError(
+                "No tienes permisos para este recurso",
+                HttpStatus.FORBIDDEN,
+                request.getRequestURI()
+        );
+    }
+
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiError> handleAuthenticationException(
-            org.springframework.security.core.AuthenticationException ex,
+            AuthenticationException ex,
             HttpServletRequest request
     ) {
         String message = "Credenciales inválidas";
@@ -38,6 +52,7 @@ public class GlobalExceptionHandler {
             message = "Usuario bloqueado";
         }
 
+        log.warn("Authentication failed: {}", message, ex);
         return buildError(
                 message,
                 HttpStatus.UNAUTHORIZED,
@@ -66,6 +81,7 @@ public class GlobalExceptionHandler {
                         .map(s -> "[" + s + "]")
                         .orElse("[ADMIN, SELLER, WAREHOUSE]");
 
+                log.warn("Invalid enum value: {}", invalid);
                 return buildError(
                         "Rol inválido: '" + invalid + "'. Valores permitidos: " + allowed,
                         HttpStatus.BAD_REQUEST,
@@ -74,6 +90,7 @@ public class GlobalExceptionHandler {
             }
 
             // Otro formato inválido cualquiera
+            log.warn("Invalid JSON: {}", ex.getMessage(), ex);
             return buildError(
                     "JSON inválido: valor con formato incorrecto",
                     HttpStatus.BAD_REQUEST,
@@ -82,6 +99,7 @@ public class GlobalExceptionHandler {
         }
 
         // JSON mal formado o body ilegible
+        log.warn("Invalid JSON: {}", ex.getMessage(), ex);
         return buildError(
                 "JSON inválido o mal formado",
                 HttpStatus.BAD_REQUEST,
