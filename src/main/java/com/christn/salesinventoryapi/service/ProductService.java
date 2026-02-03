@@ -22,6 +22,8 @@ public interface ProductService {
 
     void delete(Long id);
 
+    void restore(Long id);
+
     PageResponse<ProductResponse> search(
             String query,
             Long categoryId,

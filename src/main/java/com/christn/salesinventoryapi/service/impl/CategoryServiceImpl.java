@@ -74,4 +74,12 @@ public class CategoryServiceImpl implements CategoryService {
                 .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada"));
         category.setDeleted(true);
     }
+
+    @Override
+    @Transactional
+    public void restore(Long id) {
+        Category category = repository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Categoría no encontrada"));
+        if (category.getDeleted()) category.setDeleted(false);
+    }
 }

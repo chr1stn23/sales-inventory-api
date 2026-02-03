@@ -77,9 +77,9 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     @Transactional
     public void delete(Long id) {
-        Customer customer = repository.findById(id)
+        Customer customer = repository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado"));
-        if (!customer.getDeleted()) customer.setDeleted(true);
+        customer.setDeleted(true);
     }
 
     @Override

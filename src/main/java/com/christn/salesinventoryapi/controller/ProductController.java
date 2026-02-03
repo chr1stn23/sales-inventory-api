@@ -111,6 +111,18 @@ public class ProductController {
         return ResponseEntity.noContent().build();
     }
 
+    @Operation(summary = "Restaurar producto", description = "Restaurar un producto eliminado (soft delete)")
+    @ApiResponses({
+            @ApiResponse(responseCode = "204", description = "Producto restaurado exitosamente"),
+            @ApiResponse(responseCode = "404", description = "Producto no encontrado", content = @Content(schema =
+            @Schema(implementation = ApiError.class)))
+    })
+    @PutMapping("/{id}/restore")
+    public ResponseEntity<Void> restore(@PathVariable Long id) {
+        service.restore(id);
+        return ResponseEntity.noContent().build();
+    }
+
     @Operation(summary = "Buscar producto con filtros", description = "Buscar productos por nombre, " +
             "descripción, ID de categoría, stock y precio")
     @GetMapping("/search")

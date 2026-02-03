@@ -110,6 +110,14 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
+    @Transactional
+    public void restore(Long id) {
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Producto no encontrado"));
+        if (product.getDeleted()) product.setDeleted(true);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public PageResponse<ProductResponse> search(String query, Long categoryId, Integer minStock, Integer maxStock,
             BigDecimal minPrice, BigDecimal maxPrice, Pageable pageable) {
