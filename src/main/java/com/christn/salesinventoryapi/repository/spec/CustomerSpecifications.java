@@ -9,13 +9,13 @@ public class CustomerSpecifications {
         return (root, query, cb) -> cb.isFalse(root.get("deleted"));
     }
 
-    public static Specification<Customer> query(String q) {
-        return (root, query, cb) -> {
-            String like = "%" + q.toLowerCase() + "%";
-            return cb.or(
-                    cb.like(cb.lower(root.get("fullName")), like),
-                    cb.like(cb.lower(root.get("email")), like)
-            );
-        };
+    public static Specification<Customer> emailContains(String term) {
+        return (root, query, cb) ->
+                cb.like(cb.lower(root.get("email")), "%" + term.toLowerCase() + "%");
+    }
+
+    public static Specification<Customer> nameContains(String term) {
+        return (root, query, cb) ->
+                cb.like(cb.lower(root.get("fullName")), "%" + term.toLowerCase() + "%");
     }
 }

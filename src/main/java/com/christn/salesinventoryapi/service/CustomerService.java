@@ -13,5 +13,16 @@ public interface CustomerService {
 
     List<CustomerResponse> findAll();
 
-    PageResponse<CustomerResponse> search(String query, Pageable pageable);
+    CustomerResponse findById(Long id);
+
+    CustomerResponse update(Long id, CustomerRequest request);
+
+    void delete(Long id);
+
+    void restore(Long id);
+
+    PageResponse<CustomerResponse> search(
+            String name,
+            String email,
+            Pageable pageable);
 }
