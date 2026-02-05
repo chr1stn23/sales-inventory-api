@@ -107,9 +107,9 @@ $$
             -- SALE #1
             -- =========================
             INSERT INTO public.sales
-            (sale_date, status, total_amount, customer_id, deleted, created_at, updated_at)
+            (sale_date, status, total_amount, customer_id, created_at, updated_at)
             VALUES
-                (now() - interval '2 days', 'ACTIVE', 9.00, v_customer1, false, now(), now())
+                (now() - interval '2 days', 'ACTIVE', 9.00, v_customer1, now(), now())
             RETURNING id INTO v_sale1;
 
             INSERT INTO public.sale_details
@@ -120,9 +120,9 @@ $$
 
             -- Inventory movement (OUT)
             INSERT INTO public.inventory_movements
-            (movement_type, source_type, source_id, reason, created_at, updated_at)
+            (movement_type, source_type, source_id, reason, created_at, updated_at, event_type)
             VALUES
-                ('OUT', 'SALE', v_sale1, 'Venta seed #1', now(), now())
+                ('OUT', 'SALE', v_sale1, 'Venta seed #1', now(), now(), 'SALE_OUT')
             RETURNING id INTO v_mov1;
 
             -- Items
@@ -140,9 +140,9 @@ $$
             -- SALE #2
             -- =========================
             INSERT INTO public.sales
-            (sale_date, status, total_amount, customer_id, deleted, created_at, updated_at)
+            (sale_date, status, total_amount, customer_id, created_at, updated_at)
             VALUES
-                (now() - interval '1 days', 'ACTIVE', 13.10, v_customer2, false, now(), now())
+                (now() - interval '1 days', 'ACTIVE', 13.10, v_customer2, now(), now())
             RETURNING id INTO v_sale2;
 
             INSERT INTO public.sale_details
@@ -153,9 +153,9 @@ $$
 
             -- Inventory movement (OUT)
             INSERT INTO public.inventory_movements
-            (movement_type, source_type, source_id, reason, created_at, updated_at)
+            (movement_type, source_type, source_id, reason, created_at, updated_at, event_type)
             VALUES
-                ('OUT', 'SALE', v_sale2, 'Venta seed #2', now(), now())
+                ('OUT', 'SALE', v_sale2, 'Venta seed #2', now(), now(), 'SALE_OUT')
             RETURNING id INTO v_mov2;
 
             -- Items

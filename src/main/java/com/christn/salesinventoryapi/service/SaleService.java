@@ -4,7 +4,6 @@ import com.christn.salesinventoryapi.dto.request.SaleRequest;
 import com.christn.salesinventoryapi.dto.response.PageResponse;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
 import com.christn.salesinventoryapi.dto.response.SaleSummaryResponse;
-import com.christn.salesinventoryapi.dto.response.VoidSaleResponse;
 import com.christn.salesinventoryapi.model.SaleStatus;
 import org.springframework.data.domain.Pageable;
 
@@ -30,5 +29,5 @@ public interface SaleService {
             Pageable pageable
     );
 
-    VoidSaleResponse voidSale(Long id, String reason);
+    SaleResponse voidSale(Long id, String reason);
 }

@@ -17,11 +17,7 @@ public class SaleMapper {
                 sale.getTotalAmount(),
                 CustomerMapper.toResponse(sale.getCustomer()),
                 toDetailResponse(sale.getDetails()),
-                sale.getStatus(),
-                sale.getVoidedAt(),
-                sale.getVoidedBy(),
-                sale.getVoidedByUserId(),
-                sale.getVoidReason()
+                sale.getStatus()
         );
     }
 

@@ -38,6 +38,10 @@ public class InventoryMovement extends BaseEntity {
     @OneToMany(mappedBy = "movement", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InventoryMovementItem> items = new ArrayList<>();
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "event_type", nullable = false, length = 40)
+    private InventoryEventType eventType;
+
     public void addItem(InventoryMovementItem item) {
         items.add(item);
         item.setMovement(this);

@@ -5,6 +5,7 @@ import com.christn.salesinventoryapi.dto.request.SaleRequest;
 import com.christn.salesinventoryapi.dto.response.CustomerResponse;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
 import com.christn.salesinventoryapi.auth.JwtAuthFilter;
+import com.christn.salesinventoryapi.model.SaleStatus;
 import com.christn.salesinventoryapi.service.SaleService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -101,11 +102,7 @@ public class SaleControllerTest {
                     new BigDecimal("100.00"),
                     customerResponse,
                     List.of(),
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
+                    SaleStatus.ACTIVE
             );
 
             //When
@@ -174,7 +171,7 @@ public class SaleControllerTest {
         void findAll_ShouldReturnList() throws Exception {
             //Given
             SaleResponse response = new SaleResponse(1L, LocalDateTime.now(), new BigDecimal("30.00"), null, null,
-                    null, null, null, null, null);
+                    SaleStatus.ACTIVE);
 
             //When
             when(saleService.findAll()).thenReturn(List.of(response));

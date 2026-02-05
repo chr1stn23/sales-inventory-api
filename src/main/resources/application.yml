@@ -2,7 +2,9 @@ spring:
   application:
     name: sales-inventory-api
   jpa:
-    show-sql: true
     properties:
       hibernate:
-        format_sql: true
+        jdbc:
+          batch_size: 50
+        order_updates: true
+        order_inserts: true

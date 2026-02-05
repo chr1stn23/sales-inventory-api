@@ -1,10 +1,10 @@
 package com.christn.salesinventoryapi.model;
 
-import com.christn.salesinventoryapi.exception.InsufficientStockException;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.math.BigDecimal;
 
@@ -19,7 +19,8 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 @NoArgsConstructor
-public class Product extends BaseEntity {
+@DynamicUpdate
+public class Product extends SoftDeletableEntity {
 
     @Column(nullable = false, length = 150)
     private String name;

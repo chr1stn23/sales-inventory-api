@@ -1,5 +1,6 @@
 package com.christn.salesinventoryapi.service;
 
+import com.christn.salesinventoryapi.config.SecurityTestConfig;
 import com.christn.salesinventoryapi.dto.request.SaleDetailRequest;
 import com.christn.salesinventoryapi.dto.request.SaleRequest;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
@@ -8,6 +9,7 @@ import com.christn.salesinventoryapi.model.Customer;
 import com.christn.salesinventoryapi.model.Product;
 import com.christn.salesinventoryapi.model.Sale;
 import com.christn.salesinventoryapi.repository.CustomerRepository;
+import com.christn.salesinventoryapi.repository.InventoryMovementRepository;
 import com.christn.salesinventoryapi.repository.ProductRepository;
 import com.christn.salesinventoryapi.repository.SaleRepository;
 import com.christn.salesinventoryapi.service.impl.SaleServiceImpl;
@@ -42,6 +44,9 @@ public class SaleServiceTest {
     @Mock
     private CustomerRepository customerRepository;
 
+    @Mock
+    private InventoryMovementRepository inventoryMovementRepository;
+
     @InjectMocks
     private SaleServiceImpl saleService;
 
@@ -69,17 +74,14 @@ public class SaleServiceTest {
         @DisplayName("Should create sale successfully with valid data")
         void create_WithValidData_ShouldReturnSaleResponse() {
             //Given
+            SecurityTestConfig.authenticateAs(1L, "admin@local.com", "ADMIN");
             Customer customer = createCustomer(1L);
             Product product1 = createProduct(1L, "Product 1", new BigDecimal("100.00"), 10);
             SaleDetailRequest detailRequest = new SaleDetailRequest(1L, 2);
             SaleRequest request = new SaleRequest(1L, List.of(detailRequest));
 
             when(customerRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(customer));
-            when(productRepository.findByIdInAndDeletedFalse(List.of(1L))).thenReturn(List.of(product1));
-            when(productRepository.decreaseStockIfEnough(1L, 2)).thenAnswer(inv -> {
-                product1.setStock(product1.getStock() - 2);
-                return 1;
-            });
+            when(productRepository.findByIdInForUpdate(List.of(1L))).thenReturn(List.of(product1));
             when(saleRepository.save(any(Sale.class))).thenAnswer(invocation -> {
                 Sale sale = invocation.getArgument(0);
                 sale.setId(1L);
@@ -95,14 +97,15 @@ public class SaleServiceTest {
             assertThat(response.details()).hasSize(1);
             assertThat(product1.getStock()).isEqualTo(8);
 
-            verify(productRepository).decreaseStockIfEnough(1L, 2);
             verify(saleRepository).save(any(Sale.class));
+            verify(inventoryMovementRepository, times(1)).save(any());
         }
 
         @Test
         @DisplayName("Should create sale with multiple products successfully")
         void create_WithMultipleProducts_ShouldReturnSaleResponse() {
             //Given
+            SecurityTestConfig.authenticateAs(1L, "admin@local.com", "ADMIN");
             Customer customer = createCustomer(2L);
             Product product1 = createProduct(1L, "Product 1", new BigDecimal("50.00"), 10);
             Product product2 = createProduct(2L, "Product 2", new BigDecimal("20.00"), 5);
@@ -114,16 +117,8 @@ public class SaleServiceTest {
             );
 
             when(customerRepository.findByIdAndDeletedFalse(2L)).thenReturn(Optional.of(customer));
-            when(productRepository.findByIdInAndDeletedFalse(argThat(ids -> ids.containsAll(List.of(1L, 2L)) && ids.size() == 2)))
-                    .thenReturn(List.of(product1, product2));
-            when(productRepository.decreaseStockIfEnough(1L, 2)).thenAnswer(inv -> {
-                product1.setStock(product1.getStock() - 2);
-                return 1;
-            });
-            when(productRepository.decreaseStockIfEnough(2L, 3)).thenAnswer(inv -> {
-                product2.setStock(product2.getStock() - 3);
-                return 1;
-            });
+            when(productRepository.findByIdInForUpdate(argThat(ids -> ids.size() == 2 && ids.containsAll(List.of(1L, 2L)))))
+                    .thenReturn(List.of(product2, product1));
             when(saleRepository.save(any(Sale.class))).thenAnswer(inv -> inv.getArgument(0));
 
             //When
@@ -135,16 +130,16 @@ public class SaleServiceTest {
             assertThat(product1.getStock()).isEqualTo(8);
             assertThat(product2.getStock()).isEqualTo(2);
 
-            verify(productRepository).findByIdInAndDeletedFalse(argThat(ids -> ids.containsAll(List.of(1L, 2L)) && ids.size() == 2));
-            verify(productRepository).decreaseStockIfEnough(1L, 2);
-            verify(productRepository).decreaseStockIfEnough(2L, 3);
+            verify(productRepository).findByIdInForUpdate(argThat(ids -> ids.containsAll(List.of(1L, 2L)) && ids.size() == 2));
             verify(saleRepository, times(1)).save(any(Sale.class));
+            verify(inventoryMovementRepository, times(1)).save(any());
         }
 
         @Test
         @DisplayName("Should create sale with grouped products successfully")
         void create_WithDuplicatedProducts_shouldGroupAndSumQuantities() {
             //Given
+            SecurityTestConfig.authenticateAs(1L, "admin@local.com", "ADMIN");
             Customer customer = createCustomer(1L);
             Product product = createProduct(1L, "Product", new BigDecimal("50.00"), 10);
             SaleRequest request = new SaleRequest(1L,
@@ -155,11 +150,7 @@ public class SaleServiceTest {
             );
 
             when(customerRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(customer));
-            when(productRepository.findByIdInAndDeletedFalse(List.of(1L))).thenReturn(List.of(product));
-            when(productRepository.decreaseStockIfEnough(1L, 5)).thenAnswer(inv -> {
-                product.setStock(product.getStock() - 5);
-                return 1;
-            });
+            when(productRepository.findByIdInForUpdate(List.of(1L))).thenReturn(List.of(product));
             when(saleRepository.save(any(Sale.class))).thenAnswer(inv -> inv.getArgument(0));
 
             //When
@@ -167,11 +158,12 @@ public class SaleServiceTest {
 
             //Then
             assertThat(response.totalAmount()).isEqualByComparingTo("250.00");
+            assertThat(response.details().getFirst().quantity()).isEqualTo(5);
             assertThat(response.details()).hasSize(1);
             assertThat(product.getStock()).isEqualTo(5);
 
-            verify(productRepository, times(1)).decreaseStockIfEnough(1L, 5);
-            verify(productRepository).findByIdInAndDeletedFalse(argThat(ids -> ids.size() == 1 && ids.contains(1L)));
+            verify(productRepository, times(1)).findByIdInForUpdate(argThat(ids -> ids.size() == 1 && ids.contains(1L)));
+            verify(saleRepository, times(1)).save(any(Sale.class));
         }
 
         @Test
@@ -195,7 +187,7 @@ public class SaleServiceTest {
             Customer customer = createCustomer(1L);
             SaleRequest request = new SaleRequest(1L, List.of(new SaleDetailRequest(99L, 1)));
             when(customerRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(customer));
-            when(productRepository.findByIdInAndDeletedFalse(List.of(99L))).thenReturn(List.of());
+            when(productRepository.findByIdInForUpdate(List.of(99L))).thenReturn(List.of());
 
             //When/Then
             assertThatThrownBy(() -> saleService.create(request))
@@ -208,26 +200,27 @@ public class SaleServiceTest {
         @DisplayName("Should throw InsufficientStockException when stock is insufficient")
         void create_whenStockIsInsufficient_shouldThrowInsufficientStockException() {
             //Given
+            SecurityTestConfig.authenticateAs(1L, "admin@local.com", "ADMIN");
             Customer customer = createCustomer(1L);
             Product product = createProduct(1L, "Product", new BigDecimal("100.00"), 1);
             SaleRequest request = new SaleRequest(1L, List.of(new SaleDetailRequest(1L, 5)));
 
             when(customerRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(customer));
-            when(productRepository.findByIdInAndDeletedFalse(List.of(1L))).thenReturn(List.of(product));
-            when(productRepository.decreaseStockIfEnough(1L, 5)).thenReturn(0);
+            when(productRepository.findByIdInForUpdate(List.of(1L))).thenReturn(List.of(product));
 
             //When/Then
             assertThatThrownBy(() -> saleService.create(request))
                     .isInstanceOf(InsufficientStockException.class)
                     .hasMessage("Stock insuficiente del producto " + product.getName());
-            verify(productRepository).decreaseStockIfEnough(1L, 5);
             verify(saleRepository, never()).save(any());
+            verify(inventoryMovementRepository, never()).save(any());
         }
 
         @Test
         @DisplayName("Should throw InsufficientStockException when stock is insufficient for all products")
         void create_WithDuplicatedProductsAndInsufficientStock_ShouldFail() {
             //Given
+            SecurityTestConfig.authenticateAs(1L, "admin@local.com", "ADMIN");
             Customer customer = createCustomer(1L);
             Product product = createProduct(1L, "Product", new BigDecimal("100.00"), 6);
             SaleRequest request = new SaleRequest(1L,
@@ -238,21 +231,22 @@ public class SaleServiceTest {
             );
 
             when(customerRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(customer));
-            when(productRepository.findByIdInAndDeletedFalse(List.of(1L))).thenReturn(List.of(product));
-            when(productRepository.decreaseStockIfEnough(1L, 9)).thenReturn(0);
+            when(productRepository.findByIdInForUpdate(List.of(1L))).thenReturn(List.of(product));
 
             //When/Then
             assertThatThrownBy(() -> saleService.create(request))
                     .isInstanceOf(InsufficientStockException.class)
                     .hasMessage("Stock insuficiente del producto " + product.getName());
-            verify(productRepository).decreaseStockIfEnough(1L, 9);
+            verify(productRepository).findByIdInForUpdate(argThat(ids -> ids.size() == 1 && ids.contains(1L)));
             verify(saleRepository, never()).save(any());
+            verify(inventoryMovementRepository, never()).save(any());
         }
 
         @Test
         @DisplayName("Should throw EntityNotFoundException when one product exists and the other does not")
         void create_WhenOneProductExistsAndOtherDoesNot_ShouldThrowEntityNotFoundException() {
             // Given
+            SecurityTestConfig.authenticateAs(1L, "admin@local.com", "ADMIN");
             Customer customer = createCustomer(1L);
             Product product1 = createProduct(1L, "Product 1", new BigDecimal("100.00"), 10);
 
@@ -265,7 +259,9 @@ public class SaleServiceTest {
             );
 
             when(customerRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(customer));
-            when(productRepository.findByIdInAndDeletedFalse(List.of(1L, 2L))).thenReturn(List.of(product1));
+            when(productRepository.findByIdInForUpdate(
+                    argThat(ids -> ids.size() == 2 && ids.containsAll(List.of(1L, 2L)))
+            )).thenReturn(List.of(product1));
 
             // When / Then
             assertThatThrownBy(() -> saleService.create(request))
@@ -273,7 +269,7 @@ public class SaleServiceTest {
                     .hasMessageStartingWith("Producto no encontrado: " + 2L);
 
             verify(saleRepository, never()).save(any());
-            verify(productRepository, never()).decreaseStockIfEnough(anyLong(), anyInt());
+            verify(inventoryMovementRepository, never()).save(any());
         }
     }
 
@@ -292,7 +288,7 @@ public class SaleServiceTest {
             Sale sale2 = new Sale();
             sale2.setId(2L);
             sale2.setCustomer(customer);
-            when(saleRepository.findAllByDeletedFalse()).thenReturn(List.of(sale1, sale2));
+            when(saleRepository.findAll()).thenReturn(List.of(sale1, sale2));
 
             //When
             List<SaleResponse> responses = saleService.findAll();
@@ -301,14 +297,14 @@ public class SaleServiceTest {
             assertThat(responses).isNotNull();
             assertThat(responses).hasSize(2);
             assertThat(responses).extracting(r -> r.customer().id()).containsOnly(3L);
-            verify(saleRepository).findAllByDeletedFalse();
+            verify(saleRepository).findAll();
         }
 
         @Test
         @DisplayName("Should return empty list when no sales exist")
         void findAll_WithNoSales_ShouldReturnEmptyList() {
             //Given
-            when(saleRepository.findAllByDeletedFalse()).thenReturn(List.of());
+            when(saleRepository.findAll()).thenReturn(List.of());
 
             //When
             List<SaleResponse> responses = saleService.findAll();
@@ -316,7 +312,7 @@ public class SaleServiceTest {
             //Then
             assertThat(responses).isNotNull();
             assertThat(responses).isEmpty();
-            verify(saleRepository).findAllByDeletedFalse();
+            verify(saleRepository).findAll();
         }
     }
 }

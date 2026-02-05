@@ -5,7 +5,6 @@ import com.christn.salesinventoryapi.dto.request.VoidSaleRequest;
 import com.christn.salesinventoryapi.dto.response.PageResponse;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
 import com.christn.salesinventoryapi.dto.response.SaleSummaryResponse;
-import com.christn.salesinventoryapi.dto.response.VoidSaleResponse;
 import com.christn.salesinventoryapi.exception.ApiError;
 import com.christn.salesinventoryapi.model.SaleStatus;
 import com.christn.salesinventoryapi.service.SaleService;
@@ -94,7 +93,7 @@ public class SaleController {
     })
     @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     @PostMapping("/{id}/void")
-    public VoidSaleResponse voidSale(@PathVariable Long id,
+    public SaleResponse voidSale(@PathVariable Long id,
             @Valid @RequestBody(required = false) VoidSaleRequest body) {
         String reason = (body != null) ? body.reason() : null;
         return service.voidSale(id, reason);

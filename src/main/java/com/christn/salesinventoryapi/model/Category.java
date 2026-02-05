@@ -12,11 +12,10 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class Category extends BaseEntity {
+public class Category extends SoftDeletableEntity {
 
     @Column(nullable = false, unique = true, length = 100)
     private String name;
 
-    @Column(length = 255)
     private String description;
 }

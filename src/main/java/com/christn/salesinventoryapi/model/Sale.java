@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.DynamicUpdate;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -21,6 +22,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
+@DynamicUpdate
 public class Sale extends BaseEntity {
     @Column(nullable = false)
     private LocalDateTime saleDate;
@@ -38,16 +40,4 @@ public class Sale extends BaseEntity {
 
     @OneToMany(mappedBy = "sale", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SaleDetail> details = new ArrayList<>();
-
-    @Column(name = "voided_at")
-    private LocalDateTime voidedAt;
-
-    @Column(name = "voided_by", length = 255)
-    private String voidedBy;
-
-    @Column(name = "voided_by_user_id")
-    private Long voidedByUserId;
-
-    @Column(name = "void_reason", length = 255)
-    private String voidReason;
 }

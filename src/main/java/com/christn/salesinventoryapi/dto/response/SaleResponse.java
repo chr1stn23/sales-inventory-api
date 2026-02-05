@@ -12,10 +12,6 @@ public record SaleResponse(
         BigDecimal totalAmount,
         CustomerResponse customer,
         List<SaleDetailResponse> details,
-        SaleStatus status,
-        LocalDateTime voidedAt,
-        String voidedBy,
-        Long voidedByUserId,
-        String voidReason
+        SaleStatus status
 ) {
 }

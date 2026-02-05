@@ -12,7 +12,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
-public class Customer extends BaseEntity{
+public class Customer extends SoftDeletableEntity{
 
     @Column(nullable = false, length = 150)
     private String fullName;
