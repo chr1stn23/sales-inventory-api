@@ -7,6 +7,8 @@ import lombok.Setter;
 import org.hibernate.annotations.DynamicUpdate;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(
@@ -32,10 +34,15 @@ public class Product extends SoftDeletableEntity {
     private BigDecimal price;
 
     @Column(nullable = false)
+    private Boolean perishable = Boolean.FALSE;
+
+    @Column(nullable = false)
     private Integer stock;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "category_id", nullable = false)
     private Category category;
 
+    @OneToMany(mappedBy = "product", fetch = FetchType.LAZY)
+    private List<ProductBatch> batches = new ArrayList<>();
 }
