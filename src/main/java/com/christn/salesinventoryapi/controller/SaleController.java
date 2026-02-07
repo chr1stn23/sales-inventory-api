@@ -98,4 +98,16 @@ public class SaleController {
         String reason = (body != null) ? body.reason() : null;
         return service.voidSale(id, reason);
     }
+
+    @Operation(summary = "Completar venta", description = "Marca la venta como COMPLETED si el total está pagado")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Venta completada exitosamente"),
+            @ApiResponse(responseCode = "404", description = "Venta no encontrada"),
+            @ApiResponse(responseCode = "409", description = "La venta no está totalmente pagado o no ACTIVE")
+    })
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
+    @PostMapping("/{id}/complete")
+    public SaleResponse completeSale(@PathVariable Long id) {
+        return service.completeSale(id);
+    }
 }

@@ -10,10 +10,7 @@ import com.christn.salesinventoryapi.dto.response.SaleSummaryResponse;
 import com.christn.salesinventoryapi.exception.ForbiddenException;
 import com.christn.salesinventoryapi.exception.InsufficientStockException;
 import com.christn.salesinventoryapi.model.*;
-import com.christn.salesinventoryapi.repository.CustomerRepository;
-import com.christn.salesinventoryapi.repository.InventoryMovementRepository;
-import com.christn.salesinventoryapi.repository.ProductRepository;
-import com.christn.salesinventoryapi.repository.SaleRepository;
+import com.christn.salesinventoryapi.repository.*;
 import com.christn.salesinventoryapi.repository.spec.SaleSpecifications;
 import com.christn.salesinventoryapi.service.SaleService;
 import com.christn.salesinventoryapi.service.SaleStatusService;
@@ -42,6 +39,7 @@ public class SaleServiceImpl implements SaleService {
     private final CustomerRepository customerRepository;
     private final SaleStatusService saleStatusService;
     private final InventoryMovementRepository inventoryMovementRepository;
+    private final PaymentRepository paymentRepository;
 
     @Override
     @Transactional
@@ -197,7 +195,7 @@ public class SaleServiceImpl implements SaleService {
             throw new IllegalStateException("Solo se puede anular una venta en estado ACTIVE");
         }
 
-        // IDs de productos
+        // ID de productos
         List<Long> productIds = sale.getDetails().stream()
                 .map(d -> d.getProduct().getId())
                 .distinct().toList();
@@ -251,6 +249,37 @@ public class SaleServiceImpl implements SaleService {
         saleRepository.save(sale);
 
         return SaleMapper.toResponse(sale);
+    }
+
+    @Override
+    @Transactional
+    public SaleResponse completeSale(Long id) {
+        Sale sale = saleRepository.findWithDetailsById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Venta no encontrada: " + id));
+
+        AuthUserDetails user = currentUser();
+
+        if (sale.getStatus() != SaleStatus.ACTIVE) {
+            throw new IllegalStateException("Solo se puede completar una venta en estado ACTIVE");
+        }
+
+        BigDecimal paid = paymentRepository.sumPostedBySaleId(id);
+        if (paid == null) paid = BigDecimal.ZERO;
+
+        if (paid.compareTo(sale.getTotalAmount()) < 0) {
+            BigDecimal missing = sale.getTotalAmount().subtract(paid);
+            throw new IllegalStateException("No se pudo completar la venta: falta pagar " + missing);
+        }
+
+        saleStatusService.recordStatusChange(
+                sale,
+                SaleStatus.COMPLETED,
+                user.getId(),
+                "Venta completada por pago total"
+        );
+
+        Sale savedSale = saleRepository.save(sale);
+        return SaleMapper.toResponse(savedSale);
     }
 
     private AuthUserDetails currentUser() {

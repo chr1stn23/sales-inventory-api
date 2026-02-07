@@ -30,4 +30,6 @@ public interface SaleService {
     );
 
     SaleResponse voidSale(Long id, String reason);
+
+    SaleResponse completeSale(Long id);
 }
