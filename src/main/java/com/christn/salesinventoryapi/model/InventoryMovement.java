@@ -28,9 +28,6 @@ public class InventoryMovement extends BaseEntity {
 
     private String reason;
 
-    @Column(name = "created_by")
-    private String createdBy;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_user_id")
     private User createdByUser;
@@ -47,8 +44,7 @@ public class InventoryMovement extends BaseEntity {
         item.setMovement(this);
     }
 
-    public void removeItem(InventoryMovementItem item) {
-        items.remove(item);
-        item.setMovement(null);
-    }
+    // Readonly
+    @Column(name = "created_by_user_id", insertable = false, updatable = false)
+    private Long createdByUserId;
 }

@@ -40,12 +40,20 @@ public class Purchase extends BaseEntity {
 
     private String notes;
 
-    @Column(name = "created_by")
-    private String createdBy;
-
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by_user_id")
     private User createdByUser;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "posted_by_user_id")
+    private User postedByUser;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "voided_by_user_id")
+    private User voidedByUser;
+
+    @Column(name = "void_reason")
+    private String voidReason;
 
     @Column(name = "posted_at")
     private LocalDateTime postedAt;

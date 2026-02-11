@@ -86,7 +86,6 @@ public class SaleServiceImpl implements SaleService {
         movement.setSourceType(SourceType.SALE);
         movement.setEventType(InventoryEventType.SALE_OUT);
         movement.setReason("Venta");
-        movement.setCreatedBy(user.getUsername());
         movement.setCreatedByUser(userRef(user.getId()));
 
         for (var entry : groupedDetails.entrySet()) {
@@ -214,7 +213,6 @@ public class SaleServiceImpl implements SaleService {
         movement.setEventType(InventoryEventType.SALE_VOID_IN);
         movement.setSourceId(sale.getId());
         movement.setReason("Anulación venta #" + sale.getId());
-        movement.setCreatedBy(user.getUsername());
         movement.setCreatedByUser(userRef(user.getId()));
 
         for (SaleDetail detail : sale.getDetails()) {

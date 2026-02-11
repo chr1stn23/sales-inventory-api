@@ -6,8 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Entity
 @Table(name = "purchase_items")
@@ -38,5 +37,5 @@ public class PurchaseItem {
     private BigDecimal subTotal;
 
     @OneToMany(mappedBy = "purchaseItem", fetch = FetchType.LAZY)
-    private List<ProductBatch> batches = new ArrayList<>();
+    private Set<ProductBatch> batches = new HashSet<>();
 }
