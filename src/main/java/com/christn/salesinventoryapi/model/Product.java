@@ -11,13 +11,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(
-        name = "products",
-        indexes = {
-                // Optimizar búsquedas de productos por categoria
-                @Index(name = "idx_product_category", columnList = "category_id")
-        }
-)
+@Table(name = "products")
 @Getter
 @Setter
 @NoArgsConstructor

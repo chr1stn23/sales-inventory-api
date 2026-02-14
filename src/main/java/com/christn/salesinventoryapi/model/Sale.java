@@ -12,13 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(
-        name = "sales",
-        indexes = {
-                // Optimizar búsquedas de ventas por cliente
-                @Index(name = "idx_sale_customer", columnList = "customer_id")
-        }
-)
+@Table(name = "sales")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -33,6 +27,30 @@ public class Sale extends BaseEntity {
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalAmount;
+
+    @Column(name = "voided_at")
+    private LocalDateTime voidedAt;
+
+    @Column(name = "voided_by_user_id")
+    private Long voidedByUserId;
+
+    @Column(name = "void_reason")
+    private String voidReason;
+
+    @Column(name = "created_by_user_id")
+    private Long createdByUserId;
+
+    @Column(name = "posted_by_user_id")
+    private Long postedByUserId;
+
+    @Column(name = "posted_at")
+    private LocalDateTime postedAt;
+
+    @Column(name = "completed_by_user_id")
+    private Long completedByUserId;
+
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "customer_id", nullable = false)

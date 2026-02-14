@@ -1,6 +1,7 @@
 package com.christn.salesinventoryapi.controller;
 
-import com.christn.salesinventoryapi.dto.request.SaleRequest;
+import com.christn.salesinventoryapi.dto.request.CreateSaleRequest;
+import com.christn.salesinventoryapi.dto.request.PostSaleRequest;
 import com.christn.salesinventoryapi.dto.request.VoidSaleRequest;
 import com.christn.salesinventoryapi.dto.response.PageResponse;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
@@ -27,7 +28,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/sales")
@@ -37,26 +37,58 @@ public class SaleController {
 
     private final SaleService service;
 
-    @Operation(summary = "Crear venta", description = "Registra una nueva venta en el sistema")
+    @Operation(summary = "Crear borrador de venta", description = "Registra borrador de venta")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "Venta creada exitosamente"),
+            @ApiResponse(responseCode = "201", description = "Borrador de venta creado exitosamente"),
             @ApiResponse(responseCode = "400", description = "Error de validación"),
             @ApiResponse(responseCode = "404", description = "No encontrado: El Cliente o uno de los Productos no " +
                     "existen")
     })
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     @PostMapping
-    public ResponseEntity<SaleResponse> create(@Valid @RequestBody SaleRequest request) {
-        SaleResponse response = service.create(request);
+    public ResponseEntity<SaleResponse> createDraft(@Valid @RequestBody CreateSaleRequest request) {
+        SaleResponse response = service.createDraft(request);
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .header("Location", "/api/sales/" + response.id())
                 .body(response);
     }
 
-    @Operation(summary = "Listar ventas", description = "Obtiene una lista de todas las ventas registradas")
-    @GetMapping
-    public List<SaleResponse> findAll() {
-        return service.findAll();
+    @Operation(summary = "Crear venta (POST)", description = "Crear venta con FEFO")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Venta creada exitosamente"),
+            @ApiResponse(responseCode = "404", description = "Venta no encontrada"),
+            @ApiResponse(responseCode = "409", description = "La venta no está DRAFT")
+    })
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
+    @PostMapping("/{id}/post")
+    public ResponseEntity<SaleResponse> post(@PathVariable Long id,
+            @RequestBody(required = false) PostSaleRequest request) {
+        return ResponseEntity.ok(service.postSale(id, request));
+    }
+
+    @Operation(summary = "Completar venta", description = "Marca la venta como COMPLETED")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Venta completada exitosamente"),
+            @ApiResponse(responseCode = "404", description = "Venta no encontrada"),
+            @ApiResponse(responseCode = "409", description = "La venta no está totalmente pagado o no ACTIVE")
+    })
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
+    @PostMapping("/{id}/complete")
+    public ResponseEntity<SaleResponse> complete(@PathVariable Long id) {
+        return ResponseEntity.ok(service.completeSale(id));
+    }
+
+    @Operation(summary = "Anular venta", description = "Marca la venta como VOIDED")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Venta anulada exitosamente"),
+            @ApiResponse(responseCode = "404", description = "Venta no encontrada"),
+            @ApiResponse(responseCode = "409", description = "La venta no está DRAFT o ACTIVE")
+    })
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
+    @PostMapping("/{id}/void")
+    public ResponseEntity<SaleResponse> voidSale(@PathVariable Long id, @Valid @RequestBody VoidSaleRequest request) {
+        return ResponseEntity.ok(service.voidSale(id, request));
     }
 
     @Operation(summary = "Obtener venta por ID", description = "Busca una venta por su identificador")
@@ -65,12 +97,14 @@ public class SaleController {
             @ApiResponse(responseCode = "404", description = "Venta no encontrada", content = @Content(schema =
             @Schema(implementation = ApiError.class)))
     })
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     @GetMapping("/{id}")
-    public SaleResponse findById(@PathVariable Long id) {
-        return service.findById(id);
+    public ResponseEntity<SaleResponse> getById(@PathVariable Long id) {
+        return ResponseEntity.ok(service.getById(id));
     }
 
     @Operation(summary = "Buscar venta con filtros", description = "Buscar ventas por ID del cliente, fecha y total")
+    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
     @GetMapping("/search")
     public PageResponse<SaleSummaryResponse> search(
             @RequestParam(required = false) Long customerId,
@@ -82,32 +116,5 @@ public class SaleController {
             @PageableDefault(sort = "saleDate", direction = Sort.Direction.DESC) Pageable pageable
     ) {
         return service.search(customerId, from, to, minTotal, maxTotal, status, pageable);
-    }
-
-    @Operation(summary = "Anular venta", description = "Anula una venta existente")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Venta anulada exitosamente"),
-            @ApiResponse(responseCode = "404", description = "Venta no encontrada"),
-            @ApiResponse(responseCode = "409", description = "Venta ya anulada"),
-            @ApiResponse(responseCode = "403", description = "Permiso denegado")
-    })
-    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
-    @PostMapping("/{id}/void")
-    public SaleResponse voidSale(@PathVariable Long id,
-            @Valid @RequestBody(required = false) VoidSaleRequest body) {
-        String reason = (body != null) ? body.reason() : null;
-        return service.voidSale(id, reason);
-    }
-
-    @Operation(summary = "Completar venta", description = "Marca la venta como COMPLETED si el total está pagado")
-    @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Venta completada exitosamente"),
-            @ApiResponse(responseCode = "404", description = "Venta no encontrada"),
-            @ApiResponse(responseCode = "409", description = "La venta no está totalmente pagado o no ACTIVE")
-    })
-    @PreAuthorize("hasAnyRole('ADMIN','SELLER')")
-    @PostMapping("/{id}/complete")
-    public SaleResponse completeSale(@PathVariable Long id) {
-        return service.completeSale(id);
     }
 }

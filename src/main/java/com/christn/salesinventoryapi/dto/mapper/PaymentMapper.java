@@ -15,7 +15,7 @@ public class PaymentMapper {
                 p.getChange(),
                 p.getPaidAt(),
                 p.getReference(),
-                p.getCreatedByUser() != null ? p.getCreatedByUser().getId() : null
+                p.getCreatedByUserId()
         );
     }
 }

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
-public record SaleRequest(
+public record CreateSaleRequest(
 
         @Schema(description = "Identificador del cliente", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
         @NotNull(message = "El ID del cliente no puede ser nulo")
@@ -16,7 +16,7 @@ public record SaleRequest(
         @Schema(description = "Lista de productos incluidos en la venta. Debe contener al menos un detalle",
                 requiredMode = Schema.RequiredMode.REQUIRED)
         @NotEmpty(message = "La lista de detalles de la venta no puede estar vacía")
-        @Valid
-        List<SaleDetailRequest> details
+        List<@NotNull(message = "Los detalles no pueden contener valores nulos")
+        @Valid CreateSaleDetailRequest> details
 ) {
 }

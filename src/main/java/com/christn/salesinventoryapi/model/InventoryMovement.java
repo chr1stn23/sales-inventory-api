@@ -28,9 +28,8 @@ public class InventoryMovement extends BaseEntity {
 
     private String reason;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_user_id")
-    private User createdByUser;
+    @Column(name = "created_by_user_id")
+    private Long createdByUserId;
 
     @OneToMany(mappedBy = "movement", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<InventoryMovementItem> items = new ArrayList<>();
@@ -43,8 +42,4 @@ public class InventoryMovement extends BaseEntity {
         items.add(item);
         item.setMovement(this);
     }
-
-    // Readonly
-    @Column(name = "created_by_user_id", insertable = false, updatable = false)
-    private Long createdByUserId;
 }

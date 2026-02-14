@@ -9,9 +9,19 @@ import java.util.List;
 public record SaleResponse(
         Long id,
         LocalDateTime saleDate,
+        SaleStatus status,
+        Long customerId,
+        String customerName,
         BigDecimal totalAmount,
-        CustomerResponse customer,
-        List<SaleDetailResponse> details,
-        SaleStatus status
+        LocalDateTime createdAt,
+        Long createdByUserId,
+        LocalDateTime postedAt,
+        Long postedByUserId,
+        LocalDateTime completedAt,
+        Long completedByUserId,
+        LocalDateTime voidedAt,
+        Long voidedByUserId,
+        String voidReason,
+        List<SaleDetailLineResponse> details
 ) {
 }

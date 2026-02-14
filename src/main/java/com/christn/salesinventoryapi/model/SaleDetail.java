@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "sale_details")
@@ -34,4 +36,12 @@ public class SaleDetail {
 
     @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal subTotal;
+
+    @OneToMany(mappedBy = "saleDetail", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<SaleBatchAllocation> allocations = new ArrayList<>();
+
+    public void addAllocation(SaleBatchAllocation a) {
+        allocations.add(a);
+        a.setSaleDetail(this);
+    }
 }

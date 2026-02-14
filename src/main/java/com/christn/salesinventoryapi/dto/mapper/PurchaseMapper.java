@@ -53,13 +53,13 @@ public class PurchaseMapper {
                 purchase.getDocumentType(),
                 purchase.getDocumentNumber(),
                 purchase.getNotes(),
-                purchase.getCreatedByUser() != null ? purchase.getCreatedByUser().getId() : null,
+                purchase.getCreatedByUserId(),
                 supplier,
                 purchase.getTotalAmount(),
                 purchase.getPostedAt(),
-                purchase.getPostedByUser() != null ? purchase.getPostedByUser().getId() : null,
+                purchase.getPostedByUserId(),
                 purchase.getVoidedAt(),
-                purchase.getVoidedByUser() != null ? purchase.getVoidedByUser().getId() : null,
+                purchase.getVoidedByUserId(),
                 purchase.getVoidReason(),
                 items
         );

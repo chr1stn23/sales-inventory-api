@@ -9,10 +9,6 @@ import java.time.LocalDateTime;
 
 public class SaleSpecifications {
 
-    public static Specification<Sale> notDeleted() {
-        return (root, query, cb) -> cb.isFalse(root.get("deleted"));
-    }
-
     public static Specification<Sale> customerId(Long customerId) {
         return (root, query, cb) -> cb.equal(root.get("customer").get("id"), customerId);
     }

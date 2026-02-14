@@ -16,13 +16,48 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import tools.jackson.databind.exc.InvalidFormatException;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiError> handleTypeMismatch(
+            MethodArgumentTypeMismatchException ex,
+            HttpServletRequest request
+    ) {
+        String param = ex.getName();
+        Object value = ex.getValue();
+        Class<?> required = ex.getRequiredType();
+
+        String expected = (required != null) ? required.getSimpleName() : "tipo válido";
+
+        // Mensaje general
+        String message = "Parámetro '" + param + "' inválido. Valor recibido: " + value +
+                ". Se esperaba: " + expected + ".";
+
+        // LocalDateTime
+        if (required != null && required.equals(LocalDateTime.class)) {
+            message = "Parámetro '" + param + "' inválido. Debe ser fecha-hora ISO-8601, ejemplo: 2026-02-14T10:00:00";
+        }
+
+        // Enums
+        if (required != null && required.isEnum()) {
+            String allowed = Arrays.stream(required.getEnumConstants())
+                    .map(Object::toString)
+                    .collect(Collectors.joining(", "));
+            message = "Parámetro '" + param + "' inválido. Valores permitidos: [" + allowed + "]";
+        }
+
+        log.warn("Invalid parameter: {}", message, ex);
+        return buildError(message, HttpStatus.BAD_REQUEST, request.getRequestURI());
+    }
 
     @ExceptionHandler(AuthorizationDeniedException.class)
     public ResponseEntity<ApiError> handleAuthorizationDenied(

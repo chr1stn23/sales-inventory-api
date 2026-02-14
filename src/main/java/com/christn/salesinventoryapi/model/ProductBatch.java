@@ -6,6 +6,8 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "product_batches")
@@ -38,4 +40,7 @@ public class ProductBatch extends BaseEntity {
 
     @Column(name = "unit_cost", precision = 10, scale = 2)
     private BigDecimal unitCost;
+
+    @OneToMany(mappedBy = "productBatch")
+    private List<SaleBatchAllocation> allocations = new ArrayList<>();
 }

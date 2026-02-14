@@ -39,7 +39,6 @@ public class Payment extends BaseEntity {
     @Column(length = 100)
     private String reference;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_user_id")
-    private User createdByUser;
+    @Column(name = "created_by_user_id")
+    private Long createdByUserId;
 }

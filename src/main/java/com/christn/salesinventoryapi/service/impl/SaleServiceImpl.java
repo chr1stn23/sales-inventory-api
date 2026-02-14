@@ -2,25 +2,24 @@ package com.christn.salesinventoryapi.service.impl;
 
 import com.christn.salesinventoryapi.auth.AuthUserDetails;
 import com.christn.salesinventoryapi.dto.mapper.SaleMapper;
-import com.christn.salesinventoryapi.dto.request.SaleDetailRequest;
-import com.christn.salesinventoryapi.dto.request.SaleRequest;
+import com.christn.salesinventoryapi.dto.request.CreateSaleDetailRequest;
+import com.christn.salesinventoryapi.dto.request.CreateSaleRequest;
+import com.christn.salesinventoryapi.dto.request.PostSaleRequest;
+import com.christn.salesinventoryapi.dto.request.VoidSaleRequest;
 import com.christn.salesinventoryapi.dto.response.PageResponse;
 import com.christn.salesinventoryapi.dto.response.SaleResponse;
 import com.christn.salesinventoryapi.dto.response.SaleSummaryResponse;
 import com.christn.salesinventoryapi.exception.ForbiddenException;
-import com.christn.salesinventoryapi.exception.InsufficientStockException;
 import com.christn.salesinventoryapi.model.*;
 import com.christn.salesinventoryapi.repository.*;
 import com.christn.salesinventoryapi.repository.spec.SaleSpecifications;
 import com.christn.salesinventoryapi.service.SaleService;
-import com.christn.salesinventoryapi.service.SaleStatusService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,128 +34,428 @@ import java.util.stream.Collectors;
 public class SaleServiceImpl implements SaleService {
 
     private final SaleRepository saleRepository;
-    private final ProductRepository productRepository;
     private final CustomerRepository customerRepository;
-    private final SaleStatusService saleStatusService;
+    private final ProductRepository productRepository;
+    private final ProductBatchRepository productBatchRepository;
     private final InventoryMovementRepository inventoryMovementRepository;
+    private final SaleBatchAllocationRepository saleBatchAllocationRepository;
     private final PaymentRepository paymentRepository;
+
+    // Helpers
+    private boolean hasRole(AuthUserDetails user, String role) {
+        return user.getAuthorities().stream()
+                .anyMatch(a -> role.equals(a.getAuthority()) || ("ROLE_" + role).equals(a.getAuthority()));
+    }
+
+    private boolean isAdmin(AuthUserDetails user) {
+        return hasRole(user, "ADMIN");
+    }
+
+    private boolean isSeller(AuthUserDetails user) {
+        return hasRole(user, "SELLER");
+    }
+
+    private void validateVoidPermissions(Sale sale, AuthUserDetails user) {
+        if (isAdmin(user)) return;
+
+        // si no es SELLER tampoco
+        if (!isSeller(user)) {
+            throw new ForbiddenException("No tienes permisos para anular ventas");
+        }
+
+        // regla: SELLER solo puede anular dentro de 24h
+        LocalDateTime base = sale.getPostedAt() != null ? sale.getPostedAt() : sale.getSaleDate();
+        LocalDateTime limit = base.plusHours(24);
+
+        if (LocalDateTime.now().isAfter(limit)) {
+            throw new ForbiddenException("Solo ADMIN puede anular ventas después de 24 horas");
+        }
+
+        // regla: SELLER solo puede anular ventas creadas por él
+        if (sale.getCreatedByUserId() != null && !Objects.equals(sale.getCreatedByUserId(), user.getId())) {
+            throw new ForbiddenException("Solo ADMIN puede anular ventas creadas por otro usuario");
+        }
+    }
+
+
+    private AuthUserDetails currentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof AuthUserDetails user)) {
+            throw new IllegalStateException("El usuario no está autenticado");
+        }
+        return user;
+    }
 
     @Override
     @Transactional
-    public SaleResponse create(SaleRequest request) {
+    public SaleResponse createDraft(CreateSaleRequest request) {
+        if (request.customerId() == null) throw new IllegalArgumentException("customerId es requerido");
+
+        List<CreateSaleDetailRequest> detailRequests = request.details();
+        if (detailRequests == null || detailRequests.isEmpty() || detailRequests.stream().anyMatch(Objects::isNull)) {
+            throw new IllegalArgumentException("La venta debe tener al menos un detalle y no puede tener nulos");
+        }
+
+        // 1) Cliente
         Customer customer = customerRepository.findByIdAndDeletedFalse(request.customerId())
-                .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado"));
+                .orElseThrow(() -> new EntityNotFoundException("Cliente no encontrado: " + request.customerId()));
 
-        // Agrupar cantidades por producto
-        Map<Long, Integer> groupedDetails = request.details().stream()
-                .collect(Collectors.groupingBy(
-                        SaleDetailRequest::productId,
-                        Collectors.summingInt(SaleDetailRequest::quantity)
-                ));
+        // 2) Agrupar por producto (evitar duplicados, suma cantidades)
+        Map<Long, Integer> qtyByProduct = new HashMap<>();
+        for (CreateSaleDetailRequest d : detailRequests) {
+            if (d == null) throw new IllegalArgumentException("Detalle inválido (null)");
+            if (d.productId() == null) throw new IllegalArgumentException("productId es requerido");
+            if (d.quantity() == null || d.quantity() <= 0)
+                throw new IllegalArgumentException("quantity debe ser > 0. productId: " + d.productId());
 
-        if (groupedDetails.isEmpty()) {
-            throw new IllegalStateException("La venta debe tener al menos un detalle");
+            qtyByProduct.merge(d.productId(), d.quantity(), Integer::sum);
         }
 
-        // Lock de productos
-        List<Long> productIds = new ArrayList<>(groupedDetails.keySet());
-        List<Product> lockedProducts = productRepository.findByIdInForUpdate(productIds);
+        // 3) Fetch batch de productos
+        List<Long> productIds = new ArrayList<>(qtyByProduct.keySet());
 
-        if (lockedProducts.size() != productIds.size()) {
-            Set<Long> found = lockedProducts.stream().map(Product::getId).collect(Collectors.toSet());
-            Long missing = productIds.stream().filter(id -> !found.contains(id)).findFirst().orElse(null);
-            throw new EntityNotFoundException("Producto no encontrado" + (missing != null ? ": " + missing : ""));
+        List<Product> products = productRepository.findAllById(productIds);
+        if (products.size() != productIds.size()) {
+            Set<Long> found = products.stream().map(Product::getId).collect(Collectors.toSet());
+            List<Long> missing = productIds.stream().filter(id -> !found.contains(id)).toList();
+            throw new EntityNotFoundException("Productos no encontrados: " + missing);
         }
 
-        Map<Long, Product> productMap = lockedProducts.stream()
+        Map<Long, Product> productMap = products.stream()
                 .collect(Collectors.toMap(Product::getId, p -> p));
+
+        // 4) Crear venta DRAFT
+        AuthUserDetails user = currentUser();
 
         Sale sale = new Sale();
         sale.setCustomer(customer);
         sale.setSaleDate(LocalDateTime.now());
-        sale.setStatus(SaleStatus.ACTIVE);
+        sale.setStatus(SaleStatus.DRAFT);
+        sale.setCreatedByUserId(user.getId());
 
         BigDecimal total = BigDecimal.ZERO;
-        List<SaleDetail> details = new ArrayList<>(groupedDetails.size());
-
-        // Movement base (sin sourceId, se setea luego)
-        AuthUserDetails user = currentUser();
-        InventoryMovement movement = new InventoryMovement();
-        movement.setMovementType(MovementType.OUT);
-        movement.setSourceType(SourceType.SALE);
-        movement.setEventType(InventoryEventType.SALE_OUT);
-        movement.setReason("Venta");
-        movement.setCreatedByUser(userRef(user.getId()));
-
-        for (var entry : groupedDetails.entrySet()) {
+        List<SaleDetail> details = new ArrayList<>(qtyByProduct.size());
+        for (var entry : qtyByProduct.entrySet()) {
             Long productId = entry.getKey();
             Integer qty = entry.getValue();
 
-            if (qty == null || qty < 1) {
-                throw new IllegalArgumentException("Cantidad inválida para producto " + productId);
-            }
-
             Product product = productMap.get(productId);
 
-            Integer prev = product.getStock();
-            if (prev == null) prev = 0;
+            BigDecimal unitPrice = product.getPrice();
+            if (unitPrice == null) throw new IllegalStateException("Precio del producto no encontrado: " + productId);
 
-            int nextInt = prev - qty;
-            if (nextInt < 0) {
-                throw new InsufficientStockException(product.getName());
-            }
-            Integer next = nextInt;
-
-            // Actualiza stock en la entidad
-            product.setStock(next);
-
-            BigDecimal subtotal = product.getPrice().multiply(BigDecimal.valueOf(qty));
+            BigDecimal subtotal = unitPrice.multiply(BigDecimal.valueOf(qty));
             total = total.add(subtotal);
 
             SaleDetail detail = new SaleDetail();
             detail.setSale(sale);
             detail.setProduct(product);
             detail.setQuantity(qty);
-            detail.setUnitPrice(product.getPrice());
+            detail.setUnitPrice(unitPrice);
             detail.setSubTotal(subtotal);
-            details.add(detail);
 
-            InventoryMovementItem item = new InventoryMovementItem();
-            item.setProduct(product);
-            item.setQuantity(qty);
-            item.setPreviousStock(prev);
-            item.setNewStock(next);
-            movement.addItem(item);
+            details.add(detail);
         }
 
         sale.setDetails(details);
         sale.setTotalAmount(total);
 
-        // Guardar sale para obtener ID
-        Sale savedSale = saleRepository.save(sale);
+        Sale saved = saleRepository.save(sale);
 
-        // Amarrar el movement a sale
-        movement.setSourceId(savedSale.getId());
-        movement.setReason("Venta #" + savedSale.getId());
+        return SaleMapper.toResponse(saved);
+    }
 
+    @Transactional
+    public SaleResponse postSale(Long saleId, PostSaleRequest request) {
+
+        Sale sale = saleRepository.findByIdWithDetailsForUpdate(saleId)
+                .orElseThrow(() -> new EntityNotFoundException("Venta no encontrada: " + saleId));
+
+        if (sale.getStatus() == SaleStatus.ACTIVE || sale.getStatus() == SaleStatus.COMPLETED) {
+            return SaleMapper.toResponse(sale);
+        }
+
+        if (sale.getStatus() != SaleStatus.DRAFT) {
+            throw new IllegalStateException("Solo DRAFT. Estado: " + sale.getStatus());
+        }
+        if (sale.getDetails() == null || sale.getDetails().isEmpty()) {
+            throw new IllegalStateException("La venta debe tener detalles");
+        }
+
+        // 1) qty por producto
+        Map<Long, Integer> qtyByProduct = new HashMap<>();
+        for (SaleDetail d : sale.getDetails()) {
+            Long pid = d.getProduct().getId();
+            int qty = (d.getQuantity() == null ? 0 : d.getQuantity());
+            if (qty <= 0) throw new IllegalStateException("Cantidad inválida en detalle " + d.getId());
+            qtyByProduct.merge(pid, qty, Integer::sum);
+        }
+        List<Long> productIds = new ArrayList<>(qtyByProduct.keySet());
+
+        // 2) lock productos
+        Map<Long, Product> productMap = productRepository.findByIdInForUpdate(productIds).stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+        if (productMap.size() != productIds.size()) {
+            List<Long> missing = productIds.stream().filter(id -> !productMap.containsKey(id)).toList();
+            throw new EntityNotFoundException("Productos no encontrados: " + missing);
+        }
+
+        // 3) lock batches FEFO
+        List<ProductBatch> batches = productBatchRepository.findAvailableBatchesForUpdate(productIds);
+
+        Map<Long, List<ProductBatch>> batchesByProduct = new HashMap<>();
+        Set<ProductBatch> touched = new HashSet<>();
+        for (ProductBatch b : batches) {
+            batchesByProduct.computeIfAbsent(b.getProduct().getId(), k -> new ArrayList<>()).add(b);
+        }
+
+        // Validar stock FEFO total antes
+        for (var e : qtyByProduct.entrySet()) {
+            Long pid = e.getKey();
+            int need = e.getValue();
+
+            var list = batchesByProduct.get(pid);
+            if (list == null || list.isEmpty()) {
+                throw new IllegalStateException("El producto " + pid + " no tiene lotes disponibles");
+            }
+
+            int available = batchesByProduct.getOrDefault(pid, List.of()).stream()
+                    .mapToInt(b -> b.getQtyAvailable() == null ? 0 : b.getQtyAvailable())
+                    .sum();
+            if (available < need) {
+                throw new IllegalStateException("Stock insuficiente FEFO para producto " + pid +
+                        ". disponible=" + available + ", requerido=" + need);
+            }
+        }
+
+        AuthUserDetails user = currentUser();
+        LocalDateTime now = LocalDateTime.now();
+
+        // 4) movement OUT
+        InventoryMovement movement = new InventoryMovement();
+        movement.setMovementType(MovementType.OUT);
+        movement.setSourceType(SourceType.SALE);
+        movement.setSourceId(sale.getId());
+        movement.setEventType(InventoryEventType.SALE_OUT);
+        movement.setReason("Venta #" + sale.getId());
+        movement.setCreatedAt(now);
+        movement.setCreatedByUserId(user.getId());
+
+        // 5) allocations + bajar qtyAvailable + bajar stock agregado
+        for (SaleDetail detail : sale.getDetails()) {
+            Long pid = detail.getProduct().getId();
+            int needed = detail.getQuantity();
+
+            Product product = productMap.get(pid);
+
+            int remaining = needed;
+            for (ProductBatch batch : batchesByProduct.getOrDefault(pid, List.of())) {
+                if (remaining == 0) break;
+
+                int avail = batch.getQtyAvailable() == null ? 0 : batch.getQtyAvailable();
+                if (avail <= 0) continue;
+
+                int take = Math.min(avail, remaining);
+                batch.setQtyAvailable(avail - take);
+                touched.add(batch);
+
+                SaleBatchAllocation alloc = new SaleBatchAllocation();
+                alloc.setProductBatch(batch);
+                alloc.setQuantity(take);
+                detail.addAllocation(alloc); // setea saleDetail
+                remaining -= take;
+            }
+
+            if (remaining > 0) {
+                throw new IllegalStateException("Stock insuficiente (race condition) para producto " + pid);
+            }
+
+            int prevStock = product.getStock() == null ? 0 : product.getStock();
+            int newStock = prevStock - needed;
+            if (newStock < 0) throw new IllegalStateException("Stock insuficiente para producto " + pid);
+            product.setStock(newStock);
+
+            InventoryMovementItem mi = new InventoryMovementItem();
+            mi.setProduct(product);
+            mi.setQuantity(needed);
+            mi.setPreviousStock(prevStock);
+            mi.setNewStock(newStock);
+            movement.addItem(mi);
+        }
+
+        productBatchRepository.saveAll(new ArrayList<>(touched));
         inventoryMovementRepository.save(movement);
 
-        return SaleMapper.toResponse(savedSale);
+        sale.setStatus(SaleStatus.ACTIVE);
+        sale.setPostedAt(now);
+        sale.setPostedByUserId(user.getId());
+        saleRepository.save(sale);
+
+        return SaleMapper.toResponse(sale);
+    }
+
+    @Override
+    @Transactional
+    public SaleResponse completeSale(Long saleId) {
+        Sale sale = saleRepository.findByIdWithDetailsForUpdate(saleId)
+                .orElseThrow(() -> new EntityNotFoundException("Venta no encontrada: " + saleId));
+
+        // Idempotencia
+        if (sale.getStatus() == SaleStatus.COMPLETED) {
+            return SaleMapper.toResponse(sale);
+        }
+
+        if (sale.getStatus() == SaleStatus.VOIDED) {
+            throw new IllegalStateException("No se puede completar una venta anulada");
+        }
+
+        if (sale.getStatus() != SaleStatus.ACTIVE) {
+            throw new IllegalStateException("Solo se puede completar una venta en estado ACTIVE. Estado: " + sale.getStatus());
+        }
+
+        BigDecimal total = sale.getTotalAmount();
+        if (total == null) total = BigDecimal.ZERO;
+
+        BigDecimal paid = paymentRepository.sumPostedBySaleId(saleId);
+        if (paid == null) paid = BigDecimal.ZERO;
+
+        if (paid.compareTo(total) < 0) {
+            BigDecimal missing = total.subtract(paid);
+            throw new IllegalStateException("No se pudo completar la venta: falta pagar " + missing);
+        }
+
+        AuthUserDetails user = currentUser();
+        LocalDateTime now = LocalDateTime.now();
+
+        sale.setStatus(SaleStatus.COMPLETED);
+        sale.setCompletedAt(now);
+        sale.setCompletedByUserId(user.getId());
+
+        saleRepository.save(sale);
+
+        return SaleMapper.toResponse(sale);
+    }
+
+    @Override
+    @Transactional
+    public SaleResponse voidSale(Long saleId, VoidSaleRequest request) {
+        Sale sale = saleRepository.findByIdWithDetailsForUpdate(saleId)
+                .orElseThrow(() -> new EntityNotFoundException("Venta no encontrada: " + saleId));
+
+        // Idempotencia
+        if (sale.getStatus() == SaleStatus.VOIDED) {
+            return SaleMapper.toResponse(sale);
+        }
+
+        if (sale.getStatus() != SaleStatus.ACTIVE && sale.getStatus() != SaleStatus.DRAFT) {
+            throw new IllegalStateException("Solo se puede anular una venta en estado ACTIVE o DRAFT. Estado: " + sale.getStatus());
+        }
+
+        AuthUserDetails user = currentUser();
+        validateVoidPermissions(sale, user);
+        LocalDateTime now = LocalDateTime.now();
+
+        String reason = "Anulación de venta #" + saleId;
+
+        if (request != null && request.reason() != null && !request.reason().isBlank()) {
+            reason = request.reason().trim();
+        }
+
+        // DRAFT -> VOIDED (sin inventario)
+        if (sale.getStatus() == SaleStatus.DRAFT) {
+
+            sale.setStatus(SaleStatus.VOIDED);
+            sale.setVoidedAt(now);
+            sale.setVoidReason(reason);
+            sale.setVoidedByUserId(user.getId());
+            saleRepository.save(sale);
+            return SaleMapper.toResponse(sale);
+        }
+
+        // 1. cargar allocations + batches + products lockeados
+        List<SaleBatchAllocation> allocs = saleBatchAllocationRepository.findAllBySaleIdForUpdate(saleId);
+        if (allocs.isEmpty()) {
+            throw new IllegalStateException("La venta no tiene allocations para revertir (datos inconsistentes)");
+        }
+
+        // 2. agrupar cantidades a devolver por producto + restaurar qtyAvailable en batches
+        Map<Long, Integer> qtyByProduct = new HashMap<>();
+        Set<ProductBatch> touched = new HashSet<>();
+
+        for (SaleBatchAllocation a : allocs) {
+            if (a == null || a.getQuantity() == null || a.getQuantity() <= 0) {
+                throw new IllegalStateException("Allocation inválida en venta: " + saleId);
+            }
+            ProductBatch batch = a.getProductBatch();
+            if (batch == null || batch.getId() == null || batch.getProduct() == null) {
+                throw new IllegalStateException("Allocation corrupta: falta batch/product en venta " + saleId);
+            }
+
+            int prevAvail = batch.getQtyAvailable() == null ? 0 : batch.getQtyAvailable();
+            int nextAvail = prevAvail + a.getQuantity();
+            int max = batch.getQtyInitial() == null ? nextAvail : batch.getQtyInitial();
+            batch.setQtyAvailable(Math.min(nextAvail, max));
+            touched.add(batch);
+
+            Long productId = batch.getProduct().getId();
+            qtyByProduct.merge(productId, a.getQuantity(), Integer::sum);
+        }
+
+        // 3. Lock de productos (para stock agregado)
+        List<Long> productIds = new ArrayList<>(qtyByProduct.keySet());
+        Map<Long, Product> lockedProducts = productRepository.findByIdInForUpdate(productIds).stream()
+                .collect(Collectors.toMap(Product::getId, p -> p));
+
+        if (lockedProducts.size() != productIds.size()) {
+            List<Long> missing = productIds.stream().filter(id -> !lockedProducts.containsKey(id)).toList();
+            throw new EntityNotFoundException("Productos no encontrados para revertir stock: " + missing);
+        }
+
+        // 4. Movement IN (reversión)
+        InventoryMovement movement = new InventoryMovement();
+        movement.setMovementType(MovementType.IN);
+        movement.setSourceType(SourceType.SALE);
+        movement.setSourceId(saleId);
+        movement.setEventType(InventoryEventType.SALE_VOID_IN);
+        movement.setReason(reason);
+        movement.setCreatedAt(now);
+        movement.setCreatedByUserId(user.getId());
+
+        for (var e : qtyByProduct.entrySet()) {
+            Long pid = e.getKey();
+            int qty = e.getValue();
+
+            Product product = lockedProducts.get(pid);
+
+            int prev = product.getStock() == null ? 0 : product.getStock();
+            int next = prev + qty;
+            product.setStock(next);
+
+            InventoryMovementItem mi = new InventoryMovementItem();
+            mi.setProduct(product);
+            mi.setQuantity(qty);
+            mi.setPreviousStock(prev);
+            mi.setNewStock(next);
+            movement.addItem(mi);
+        }
+
+        // 5. Persistencia batches restaurados + movement + estado de sale
+        productBatchRepository.saveAll(new ArrayList<>(touched));
+        inventoryMovementRepository.save(movement);
+
+        sale.setStatus(SaleStatus.VOIDED);
+        sale.setVoidedAt(now);
+        sale.setVoidReason(reason);
+        sale.setVoidedByUserId(user.getId());
+        saleRepository.save(sale);
+
+        return SaleMapper.toResponse(sale);
     }
 
     @Override
     @Transactional(readOnly = true)
-    public List<SaleResponse> findAll() {
-        return saleRepository.findAll()
-                .stream()
-                .map(SaleMapper::toResponse)
-                .toList();
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public SaleResponse findById(Long id) {
-        Sale sale = saleRepository.findWithDetailsById(id)
+    public SaleResponse getById(Long id) {
+        Sale sale = saleRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new EntityNotFoundException("Venta no encontrada: " + id));
         return SaleMapper.toResponse(sale);
     }
@@ -165,7 +464,7 @@ public class SaleServiceImpl implements SaleService {
     @Transactional(readOnly = true)
     public PageResponse<SaleSummaryResponse> search(Long customerId, LocalDateTime from, LocalDateTime to,
             BigDecimal minTotal, BigDecimal maxTotal, SaleStatus status, Pageable pageable) {
-        Specification<Sale> spec = Specification.where(SaleSpecifications.notDeleted());
+        Specification<Sale> spec = (root, query, cb) -> cb.conjunction();
 
         if (customerId != null) spec = spec.and(SaleSpecifications.customerId(customerId));
         if (from != null) spec = spec.and(SaleSpecifications.from(from));
@@ -179,133 +478,5 @@ public class SaleServiceImpl implements SaleService {
                 .map(SaleMapper::toSummaryResponse);
 
         return PageResponse.from(page);
-    }
-
-    @Override
-    @Transactional
-    public SaleResponse voidSale(Long id, String reason) {
-        Sale sale = saleRepository.findWithDetailsNoProductsById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Venta no encontrada: " + id));
-
-        AuthUserDetails user = currentUser();
-        validateVoidPermissions(sale, user);
-
-        if (sale.getStatus() != SaleStatus.ACTIVE) {
-            throw new IllegalStateException("Solo se puede anular una venta en estado ACTIVE");
-        }
-
-        // ID de productos
-        List<Long> productIds = sale.getDetails().stream()
-                .map(d -> d.getProduct().getId())
-                .distinct().toList();
-
-        // Lock de productos
-        List<Product> lockedProducts = productRepository.findByIdInForUpdate(productIds);
-        if (lockedProducts.size() != productIds.size()) {
-            throw new IllegalStateException("No se pudieron bloquear todos los productos para revertir stock");
-        }
-        Map<Long, Product> productMap = lockedProducts.stream()
-                .collect(Collectors.toMap(Product::getId, p -> p));
-
-        InventoryMovement movement = new InventoryMovement();
-        movement.setMovementType(MovementType.IN);
-        movement.setSourceType(SourceType.SALE);
-        movement.setEventType(InventoryEventType.SALE_VOID_IN);
-        movement.setSourceId(sale.getId());
-        movement.setReason("Anulación venta #" + sale.getId());
-        movement.setCreatedByUser(userRef(user.getId()));
-
-        for (SaleDetail detail : sale.getDetails()) {
-            Product product = productMap.get(detail.getProduct().getId());
-            if (product == null) {
-                throw new IllegalStateException("Producto no encontrado para reversión: " + detail.getProduct()
-                        .getId());
-            }
-
-            Integer prev = product.getStock();
-            if (prev == null) prev = 0;
-            Integer next = prev + detail.getQuantity();
-            product.setStock(next);
-
-            InventoryMovementItem item = new InventoryMovementItem();
-            item.setProduct(product);
-            item.setQuantity(detail.getQuantity());
-            item.setPreviousStock(prev);
-            item.setNewStock(next);
-            movement.addItem(item);
-        }
-
-        inventoryMovementRepository.save(movement);
-
-        saleStatusService.recordStatusChange(
-                sale,
-                SaleStatus.VOIDED,
-                user.getId(),
-                reason
-        );
-
-        saleRepository.save(sale);
-
-        return SaleMapper.toResponse(sale);
-    }
-
-    @Override
-    @Transactional
-    public SaleResponse completeSale(Long id) {
-        Sale sale = saleRepository.findWithDetailsById(id)
-                .orElseThrow(() -> new EntityNotFoundException("Venta no encontrada: " + id));
-
-        AuthUserDetails user = currentUser();
-
-        if (sale.getStatus() != SaleStatus.ACTIVE) {
-            throw new IllegalStateException("Solo se puede completar una venta en estado ACTIVE");
-        }
-
-        BigDecimal paid = paymentRepository.sumPostedBySaleId(id);
-        if (paid == null) paid = BigDecimal.ZERO;
-
-        if (paid.compareTo(sale.getTotalAmount()) < 0) {
-            BigDecimal missing = sale.getTotalAmount().subtract(paid);
-            throw new IllegalStateException("No se pudo completar la venta: falta pagar " + missing);
-        }
-
-        saleStatusService.recordStatusChange(
-                sale,
-                SaleStatus.COMPLETED,
-                user.getId(),
-                "Venta completada por pago total"
-        );
-
-        Sale savedSale = saleRepository.save(sale);
-        return SaleMapper.toResponse(savedSale);
-    }
-
-    private AuthUserDetails currentUser() {
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !(auth.getPrincipal() instanceof AuthUserDetails user)) {
-            throw new IllegalStateException("El usuario no está autenticado");
-        }
-        return user;
-    }
-
-    private boolean isAdmin(AuthUserDetails user) {
-        return user.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority).filter(Objects::nonNull)
-                .anyMatch(a -> a.equals("ROLE_ADMIN") || a.equals("ADMIN"));
-    }
-
-    private void validateVoidPermissions(Sale sale, AuthUserDetails user) {
-        if (isAdmin(user)) return;
-
-        LocalDateTime limit = sale.getSaleDate().plusHours(24);
-        if (LocalDateTime.now().isAfter(limit)) {
-            throw new ForbiddenException("Solo ADMIN puede anular ventas después de 24 horas");
-        }
-    }
-
-    private User userRef(Long id) {
-        User u = new User();
-        u.setId(id);
-        return u;
     }
 }

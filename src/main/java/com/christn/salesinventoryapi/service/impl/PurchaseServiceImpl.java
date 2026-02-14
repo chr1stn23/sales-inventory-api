@@ -70,12 +70,6 @@ public class PurchaseServiceImpl implements PurchaseService {
         return user;
     }
 
-    private User userRef(Long id) {
-        User u = new User();
-        u.setId(id);
-        return u;
-    }
-
     /**
      * Carga "detail" en 2 queries para evitar MultipleBagFetchException:
      * 1) Purchase + supplier + items + product
@@ -157,7 +151,7 @@ public class PurchaseServiceImpl implements PurchaseService {
                 PurchaseDocumentType.INVOICE);
         purchase.setDocumentNumber(request.documentNumber());
         purchase.setNotes(request.notes());
-        purchase.setCreatedByUser(userRef(userId));
+        purchase.setCreatedByUserId(userId);
         purchase.setSupplier(supplier);
 
         BigDecimal total = BigDecimal.ZERO;
@@ -247,7 +241,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         movement.setSourceId(purchaseId);
         movement.setEventType(InventoryEventType.PURCHASE_IN);
         movement.setReason("Ingreso por compra");
-        movement.setCreatedByUser(userRef(userId));
+        movement.setCreatedByUserId(userId);
 
         List<ProductBatch> allBatches = new ArrayList<>();
 
@@ -306,7 +300,7 @@ public class PurchaseServiceImpl implements PurchaseService {
 
         purchase.setStatus(PurchaseStatus.POSTED);
         purchase.setPostedAt(now);
-        purchase.setPostedByUser(userRef(userId));
+        purchase.setPostedByUserId(userId);
         purchaseRepository.save(purchase);
 
         return loadDetail(purchaseId);
@@ -340,7 +334,7 @@ public class PurchaseServiceImpl implements PurchaseService {
             purchase.setStatus(PurchaseStatus.VOIDED);
             purchase.setVoidedAt(now);
             purchase.setVoidReason(reason);
-            purchase.setVoidedByUser(userRef(userId));
+            purchase.setVoidedByUserId(userId);
             purchaseRepository.save(purchase);
             return loadDetail(purchaseId);
         }
@@ -387,7 +381,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         movement.setSourceId(purchaseId);
         movement.setEventType(InventoryEventType.PURCHASE_RETURN_OUT);
         movement.setReason(reason != null ? reason : "Anulación de compra");
-        movement.setCreatedByUser(userRef(userId));
+        movement.setCreatedByUserId(userId);
 
         for (var entry : qtyByProduct.entrySet()) {
             Long productId = entry.getKey();
@@ -421,7 +415,7 @@ public class PurchaseServiceImpl implements PurchaseService {
         purchase.setStatus(PurchaseStatus.VOIDED);
         purchase.setVoidedAt(now);
         purchase.setVoidReason(reason);
-        purchase.setVoidedByUser(userRef(userId));
+        purchase.setVoidedByUserId(userId);
         purchaseRepository.save(purchase);
 
         return loadDetail(purchaseId);
